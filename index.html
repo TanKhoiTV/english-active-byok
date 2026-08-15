@@ -121,7 +121,11 @@ Format your output clearly in Markdown:
         const data = await response.json();
         if (data.error) throw new Error(data.error.message);
 
-        const feedbackMarkdown = data.candidates[0].content.parts[0].text;
+        const candidate = data.candidates?.[0];
+        if (!candidate?.content?.parts?.[0]?.text) {
+          throw new Error("No response generated. The content may have been filtered.");
+        }
+        const feedbackMarkdown = candidate.content.parts[0].text;
         analysisResult.innerHTML = marked.parse(feedbackMarkdown);
       } catch (err) {
         analysisResult.innerHTML = `<p class="text-red-600">Error generating evaluation: ${err.message}</p>`;
