@@ -30,7 +30,7 @@ The ETS TOEIC Writing sample test (ets.org, publicly available PDF) defines the 
 
 ### Storage
 
-- **Phase 1**: Embed the question bank as a JSON array inside an inline `<script type="application/json">` tag in `index.html`. No `fetch()` required — the data is available immediately after HTML parse, supporting `file://` protocol and offline use. Total payload: <2 KB for 8 questions.
+- **Phase 1**: Embed the question bank as a JSON array inside an inline `<script type="application/json">` tag in `index.html`. No `fetch()` required — the data is available immediately after HTML parse, supporting `file://` protocol and offline use. Total payload is small — a few KB for the initial bank — and loads synchronously with no `fetch()`.
 - **Phase 2** (when the bank exceeds ~30 questions or 50 KB): Split into a separate `questions.json` file served from the same GitHub Pages origin, loaded via `fetch()` with a localStorage cache fallback:
 
   ```javascript
@@ -80,7 +80,7 @@ The JSON export/import (ADR-001 scope) covers **user-generated data only**:
 
 **Schema versioning**: Export JSON includes `"version": 1`. On import, if `version` is lower than the current app version, a migration function upgrades the data structure (additive only — never removes fields).
 
-**Dead-model recovery**: On import, if `selectedModel` matches a deprecated model ID in model-provider-guide.md's deprecation table, the app shows a banner: "Your saved model (gemini-X) is deprecated. [Select a replacement]." and prompts the user to choose from the current stable list.
+**Dead-model recovery**: On import, if `selectedModel` matches a deprecated model ID in model-provider-guide.md's deprecation table, the app shows a banner using the canonical recovery copy from ADR-002 §Tier 1 #3 — "The model in your exported settings is no longer available. Please select a different model above." — and prompts the user to choose from the current stable list.
 
 > **Cross-reference**: ADR-002 §Tier 1 #3 defines a complementary **runtime** recovery path — if `evaluateAnswer()` returns an API 400/404 for a saved model ID at evaluation time, a banner prompts reselection. The two checks are orthogonal: ADR-004's import-time check is proactive (prevents evaluation from failing at all); ADR-002's runtime check is reactive (handles models that become deprecated between visits). Both share the same banner UI and reselection flow — do not implement as two separate code paths.
 
@@ -103,7 +103,7 @@ The canonical question schema is documented in `docs/question-schema.md`. Each q
 ### IndexedDB at runtime
 
 - **Pros**: Queryable, can store large datasets, user-custom questions
-- **Cons**: Adds complexity for a dataset that fits in 2 KB; no benefit at Phase 1 scale; IndexedDB quirks across browsers
+- **Cons**: Adds complexity for a dataset that is only a few KB; no benefit at Phase 1 scale; IndexedDB quirks across browsers
 - **Rejected**: Overkill for <50 questions; deferred to future ADR if user-custom questions are added
 
 ### sql.js-httpvfs (SQLite on GitHub Pages)

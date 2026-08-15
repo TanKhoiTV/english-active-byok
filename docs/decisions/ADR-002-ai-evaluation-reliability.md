@@ -48,7 +48,7 @@ Adopt a layered reliability approach with techniques prioritized by leverage-per
 
 The JSON schema decomposes each Part's ETS criteria into separate scored sub-dimensions [CITATION C4, p. 5]:
 
-- **Part 1 (0–3)**: grammar, task_completion, picture_relevance
+- **Part 1 (0–3)**: grammar, task_completion, word_usage
 - **Part 2 (0–4)**: sentence_quality_variety, vocabulary, organization
 - **Part 3 (0–5)**: thesis_and_support, grammar, vocabulary, organization
 
