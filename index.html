@@ -80,11 +80,15 @@ Format your output clearly in Markdown:
       "Part 3: Do you agree or disagree with the following statement? 'Working from home is more productive than working in a traditional office.' Give specific reasons and examples to support your opinion."
     ];
 
-    window.onload = () => {
-      const savedKey = localStorage.getItem('gemini_api_key');
-      if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
-      loadQuestion();
-    };
+    window.onload = () => {                                                                                                                                                                                                 
+      loadQuestion();                                                                                                                                                                                                       
+      try {                                                                                                                                                                                                                 
+        const savedKey = localStorage.getItem('gemini_api_key');                                                                                                                                                            
+        if (savedKey) document.getElementById('apiKeyInput').value = savedKey;                                                                                                                                              
+      } catch (e) {                                                                                                                                                                                                         
+        console.warn('localStorage not available:', e.message);                                                                                                                                                             
+      }                                                                                                                                                                                                                     
+    }; 
 
     function saveKey() {
       const key = document.getElementById('apiKeyInput').value.trim();
