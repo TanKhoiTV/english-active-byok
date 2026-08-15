@@ -42,7 +42,11 @@
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Your Written Response</label>
-        <textarea id="userInput" rows="8" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Type your answer here..."></textarea>
+        <textarea id="userInput" oninput="updateWordCount()" rows="8" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Type your answer here..."></textarea>
+        <div class="flex justify-between text-xs text-gray-500 mt-1">                                                                                                                                                           
+          <span id="wordCount">0 words</span>                                                                                                                                                                                   
+          <span>TOEIC Part 3 target: ~300 words</span>                                                                                                                                                                          
+        </div> 
       </div>
 
       <button id="submitBtn" onclick="evaluateAnswer()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition shadow">
@@ -98,6 +102,12 @@ Format your output clearly in Markdown:
       const idx = document.getElementById('questionSelect').value;
       document.getElementById('questionPromptText').innerText = QUESTIONS[idx];
     }
+
+    function updateWordCount() {                                                                                                                                                                                            
+      const text = document.getElementById('userInput').value.trim();                                                                                                                                                       
+      const count = text ? text.split(/\s+/).length : 0;                                                                                                                                                                    
+      document.getElementById('wordCount').innerText = `${count} words`;                                                                                                                                                    
+    } 
 
     async function evaluateAnswer() {
       const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
