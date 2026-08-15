@@ -38,7 +38,7 @@ This ADR resolves all of them. The framework decision comes first because it det
 
 A single static HTML page wired from multiple `<script type="module">` files. Storage of the question bank itself is ADR-004's call (inline JSON in `index.html` for Phase 1, `questions.json` for Phase 2); ADR-003 defines the *access point and contracts* around it.
 
-```
+```text
 /index.html                     — HTML skeleton + component wiring; embeds Phase 1 bank as
                                    <script type="application/json" id="question-bank"> (per ADR-004)
 /scripts/
