@@ -6,6 +6,7 @@
   <title>TOEIC Writing Practice</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
   <div class="max-w-3xl mx-auto space-y-6">
@@ -19,6 +20,7 @@
       <div class="flex gap-2 w-full sm:w-auto">
         <input id="apiKeyInput" type="password" placeholder="Paste Gemini API Key" class="border border-gray-300 rounded px-3 py-1 text-sm flex-1 sm:w-64">
         <button onclick="saveKey()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded transition">Save</button>
+        <button onclick="clearKey()" class="border border-gray-300 text-gray-600 text-sm px-4 py-1 rounded transition">Clear</button>
       </div>
     </div>
 
@@ -86,6 +88,12 @@ Format your output clearly in Markdown:
       alert('API Key saved locally in your browser.');
     }
 
+    function clearKey() {                                                                                                                                                                                                   
+      localStorage.removeItem('gemini_api_key');                                                                                                                                                                            
+      document.getElementById('apiKeyInput').value = '';                                                                                                                                                                    
+      alert('API Key removed.');                                                                                                                                                                                            
+    } 
+
     function loadQuestion() {
       const idx = document.getElementById('questionSelect').value;
       document.getElementById('questionPromptText').innerText = QUESTIONS[idx];
@@ -130,7 +138,7 @@ Format your output clearly in Markdown:
           throw new Error("No response generated. The content may have been filtered.");
         }
         const feedbackMarkdown = candidate.content.parts[0].text;
-        analysisResult.innerHTML = marked.parse(feedbackMarkdown);
+        analysisResult.innerHTML = DOMPurify.sanitize(marked.parse(feedbackMarkdown));
       } catch (err) {
         analysisResult.innerHTML = `<p class="text-red-600">Error generating evaluation: ${err.message}</p>`;
       } finally {
