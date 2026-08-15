@@ -28,7 +28,7 @@ This ADR resolves all of them. The framework decision comes first because it det
 
 ### 1. Framework: stay vanilla JS — no framework, no build step
 
-**Decision.** Retain **vanilla JavaScript with ES modules** as the only "framework." Do **not** adopt React, Vue, Alpine.js, Preact+htm, or Lit. Do **not** add a build step, and do **not** amend ADR-001's no-build constraint (rejecting option (c) from the analysis).
+**Decision.** Retain **vanilla JavaScript with ES modules** as the only "framework." Do **not** adopt React, Vue, Alpine.js, Preact+htm, or Lit. Do **not** add a build step, and do **not** amend ADR-001's no-build constraint (option (c); ADR-001's no-build rule stands as written).
 
 **Tradeoff.** ADR-001's "no build pipelines" is read as written. A dev-only build that emits committed static HTML (option (c)) would technically satisfy "static deploy," but it imports a toolchain, lockfile churn, and a CI dependency for an app whose entire dataset is a small embedded question bank — a cost with no offset at this scale. CDN-loadable frameworks (option (b): Alpine, Preact+htm, Lit) avoid the build but still add a dependency and a reactivity model this app does not need (5–10 components, infrequent UI updates). Vanilla modules give decomposition with zero framework overhead and the smallest failure surface.
 
