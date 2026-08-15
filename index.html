@@ -118,8 +118,12 @@ Format your output clearly in Markdown:
           })
         });
 
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
+        if (!response.ok) {                                                                                                                                                                                                     
+          const errData = await response.json().catch(() => ({}));                                                                                                                                                              
+          throw new Error(errData.error?.message || `HTTP ${response.status}: ${response.statusText}`);                                                                                                                         
+        }                                                                                                                                                                                                                       
+        const data = await response.json();                                                                                                                                                                                     
+        if (data.error) throw new Error(data.error.message);  
 
         const candidate = data.candidates?.[0];
         if (!candidate?.content?.parts?.[0]?.text) {
