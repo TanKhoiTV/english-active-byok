@@ -6,355 +6,300 @@ Proposed
 
 ## Date
 
-2026-08-15
+2026-08-16
 
 ## Context
 
-ADR-001 defines the app as a single-page, client-side TOEIC Writing practice tool with hard constraints: **single static HTML file, no backend, no build pipelines, GitHub Pages deployment, BYOK, and offline-capable UI**. The current `index.html` is 380 lines of inline vanilla JavaScript with no external dependencies beyond CDN-loaded Tailwind, Marked.js, and (recently added) DOMPurify.
+ADR-001 scopes the app as a single-page, client-side TOEIC Writing practice tool: single static HTML, no backend, no build pipelines, GitHub Pages, BYOK, offline-capable UI. The current `index.html` is vanilla JS (no build step) loading Tailwind, Marked.js, and DOMPurify from CDN, with a monolithic `SYSTEM_PROMPT` constant.
 
-The app is being restructured from a flat inline script into a component-level architecture for extensibility. This requires resolving several interdependent decisions that prior ADRs have explicitly deferred to this document:
+We are restructuring the flat inline script into a component-level architecture. Several decisions were explicitly deferred to this ADR by other documents and must be resolved here:
 
-1. **Framework choice vs. the no-build-pipeline constraint.** ADR-001 rules out build pipelines. A framework like React, Vue SFCs, or SvelteKit requires a dev-time build step to produce the final static HTML. Whether that's compatible (dev-only build, committed static output) or not needs an explicit decision.
-2. **Component decomposition.** ADR-001 and ADR-004 reference a `QuestionSelector` component and `loadQuestions()` integration — both need defined data contracts.
-3. **`validateQuestion()` execution.** `docs/question-schema.md` defines a TypeScript discriminated union and a `validateQuestion()` pseudocode function, but TypeScript types do not validate JSON at runtime. The mechanism (hand-rolled JS validator vs. schema validator vs. build-time generation) needs a concrete resolution.
-4. **Prompt assembly.** ADR-002 defines per-Part rubric criteria (`RubricCriteriaPart1/2/3` from `question-schema.md`) and few-shot anchors. The `SYSTEM_PROMPT` constant in `index.html` must be restructured to inject per-Part criteria dynamically.
-5. **Model dropdown.** `model-provider-guide.md` defines the stable model list and temperature-support map. The dropdown must use a baked-in list, not a live `models.list()` API call (which would violate offline capability).
-6. **Dead-model recovery.** ADR-002 (runtime 4xx on `evaluateAnswer()`) and ADR-004 (import-time check against the deprecation table) both point to one shared implementation.
-7. **Rendering safety.** Gemini's `error_analysis`, `polished_revision`, and `key_recommendations` text fields are rendered as HTML via Marked.js. These come from a prompt-driven LLM response and are not fully trusted.
-8. **CDN fallback.** ADR-001 requires the UI to work when CDN resources are unavailable. The current app loads Tailwind, Marked, and DOMPurify from CDN — "works" needs a concrete definition.
-9. **State management shape.** Cross-cutting state (selected model, Part/question, draft answer, history, API key, settings, capability map) needs a deliberate structure rather than ad-hoc globals.
-10. **General API error handling.** Beyond dead-model recovery, the app must handle rate limits, quota errors, malformed responses, and timeouts with a shared pattern.
+- **Framework choice** — does "no build pipelines" (ADR-001) permit a framework that bundles at dev time? This decision constrains every later one.
+- **`QuestionSelector` + `loadQuestions()`** — referenced by ADR-001 and ADR-004; needs a defined data contract and defined loading/error UI states.
+- **`validateQuestion()` execution** — `docs/question-schema.md` defines TypeScript types, but types do not validate JSON at runtime.
+- **Prompt assembly** — ADR-002 defines per-Part rubric criteria and few-shot anchors; `SYSTEM_PROMPT` must inject them per Part and carry `prompt_version`.
+- **Model dropdown** — `docs/model-provider-guide.md` owns the stable list and temperature-support map; the dropdown must use a baked-in copy, not a live API call.
+- **Shared dead-model recovery** — ADR-002 (runtime 4xx) and ADR-004 (import time) both point at one implementation.
+- **Rendering safety, CDN fallback, state shape, general API error handling** — cross-cutting concerns nothing else owns.
+
+This ADR resolves all of them. The framework decision comes first because it determines the rest.
 
 ## Decision
 
-### 1. Framework: Stay vanilla JS — no framework, no build step
+### 1. Framework: stay vanilla JS — no framework, no build step
 
-**Decision**: Retain **vanilla JavaScript with ES modules** as the sole framework. Do not adopt Alpine.js, React, Preact, Lit, Vue, or any other framework. Accept a dev-only build step **only if** it produces committed static output that is deployed as-is (i.e., the build is a curator-time convenience, not a runtime dependency). As of this ADR, no build step is added.
+**Decision.** Retain **vanilla JavaScript with ES modules** as the only "framework." Do **not** adopt React, Vue, Alpine.js, Preact+htm, or Lit. Do **not** add a build step, and do **not** amend ADR-001's no-build constraint (rejecting option (c) from the analysis).
 
-**Rationale** (in priority order):
+**Tradeoff.** ADR-001's "no build pipelines" is read as written. A dev-only build that emits committed static HTML (option (c)) would technically satisfy "static deploy," but it imports a toolchain, lockfile churn, and a CI dependency for an app whose entire dataset is a small embedded question bank — a cost with no offset at this scale. CDN-loadable frameworks (option (b): Alpine, Preact+htm, Lit) avoid the build but still add a dependency and a reactivity model this app does not need (5–10 components, infrequent UI updates). Vanilla modules give decomposition with zero framework overhead and the smallest failure surface.
 
-- **ADR-001 compliance**: ADR-001 explicitly rules out "build pipelines." A framework that requires bundling to produce the deployed HTML is a non-starter without a conscious amendment to that constraint. Even a dev-only build introduces complexity (dependency management, CI, lockfile churn) for a dataset that fits in under 2 KB.
-- **Constraint stack**: GitHub Pages (static-only), no backend, BYOK, offline-capable UI — vanilla JS satisfies all four with zero tradeoffs. Every framework considered adds at least one compromise.
-- **Current trajectory**: The existing `index.html` is already vanilla JS. The user explicitly prefers "a lighter framework than React." The lightest option is *no* framework — the "component-level organization" the user wants can be achieved through module pattern, which is strictly additive to what already works.
-- **Bundle size**: Zero bytes of framework overhead. Tailmarked Alpine.js is ~10 KB gzipped; React + deps is ~40 KB+. Not critical at this scale, but the principle holds: every dependency is a failure surface.
-- **Extensibility debt is cheap**: A well-organized vanilla module structure can be progressively enhanced. If the app grows beyond the current scope, the framework question can be revisited in a new ADR — but the migration path from vanilla modules to any framework is far easier than the reverse.
+**Component model.** Components are self-contained module functions with a `render()` / `update(props)` / `destroy()` lifecycle, one per file. State flows one direction: `AppState` → props → `render()`. This is a minimal emulation of the framework component contract — enough to decompose features, portable to Alpine/Lit/React later if the app outgrows it.
 
-**Component-level organization**: The "components" are implemented as **self-contained module functions** following a `createComponent(props, ctx)` convention:
+### 2. File structure
+
+A single static HTML page wired from multiple `<script type="module">` files. Storage of the question bank itself is ADR-004's call (inline JSON in `index.html` for Phase 1, `questions.json` for Phase 2); ADR-003 defines the *access point and contracts* around it.
+
+```
+/index.html                     — HTML skeleton + component wiring; embeds Phase 1 bank as
+                                   <script type="application/json" id="question-bank"> (per ADR-004)
+/scripts/
+  store.js                      — AppState singleton (§10)
+  schema.js                     — QuestionType constants + RUBRIC_CRITERIA + SCORING_BANDS + validateQuestion() (§3,§4,§5)
+  models.js                     — STABLE_MODELS + TEMPERATURE_SUPPORT, mirrored from model-provider-guide.md (§6)
+  questions.js                  — loadQuestions() loader (per ADR-004 Phase 1/2) (§3)
+  fewShotAnchors.js             — per-Part few-shot anchors, paraphrased for copyright (§5)
+  promptBuilder.js              — assembles SYSTEM_PROMPT per Part (§5)
+  evaluator.js                  — evaluateAnswer() + handleApiError() (§7,§11)
+  app.js                        — top-level controller; mounts components; calls loadQuestions() at init
+  components/
+    modelDropdown.js
+    questionSelector.js
+    answerEditor.js
+    modelRecoveryBanner.js
+    examinerOutput.js
+```
+
+`models.js` and `fewShotAnchors.js` are new modules that keep vendor/config data and copyrighted-adjacent content out of this ADR body, consistent with ADR-002's "vendor config lives in a separate doc" principle.
+
+### 3. QuestionSelector contract + loadQuestions() integration
+
+**Selection is lifted up.** `QuestionSelector` is presentational; it holds no selection state. It receives the data and the current selection, and reports changes upward:
 
 ```javascript
-// Example: a Component function returns { render(), update(props), destroy() }
-function QuestionSelector({ questions, state, onQuestionChange }) {
-  return {
-    render() { /* return HTML string */ },
-    update(newProps) { /* diff and patch DOM */ },
-    destroy() { /* remove event listeners */ }
-  };
+// scripts/components/questionSelector.js
+export function QuestionSelector({ questions, value, onChange }) {
+  // value: { part, questionId }; onChange(next) writes back to AppState
+  return { render() {/* Part buttons + question dropdown */}, update(next) {}, destroy() {} };
 }
 ```
 
-Each component is a single function with a `render`/`update`/`destroy` lifecycle, stored in its own `.js` file. State flows in one direction: `AppState` → `props` → `Component.render()`. This is a deliberate, minimal emulation of the framework component contract — enough structure to decompose features, not enough to become a mini-framework.
-
-> **Future option**: If component reactivity becomes a genuine need (not just a preference), **Alpine.js 3.x** loaded from CDN is the lowest-friction upgrade path — it's CDN-loadable (no build step), ~10 KB gzipped, and maps naturally from the existing x-data-style thinking. This is the only framework on the shortlist that doesn't violate ADR-001's spirit.
-
-### 2. File structure: Multi-file `<script type="module">` on a single HTML page
-
-The app remains a **single static HTML page** deployed via GitHub Pages. The inline `<script>` block is restructured into multiple `<script type="module">` files referenced via `src=`:
-
-```
-/index.html                    — HTML skeleton + component wiring
-/scripts/store.js              — singleton AppState
-/scripts/schema.js             — QuestionType constants + validateQuestion()
-/scripts/questions.js          — embedded question bank (Phase 1 inline JSON array)
-/scripts/components/
-  /modelDropdown.js            — ModelDropdown component
-  /questionSelector.js         — QuestionSelector component
-  /answerEditor.js             — AnswerEditor component
-  /modelRecoveryBanner.js      — shared dead-model recovery banner
-  /examinerOutput.js           — evaluation results renderer
-/scripts/promptBuilder.js      — assembles SYSTEM_PROMPT per Part
-/scripts/evaluator.js          — evaluateAnswer() + error handling
-/scripts/app.js                — top-level controller, mounts components
-```
-
-**Why not separate HTML pages or an SSG?** One page = one deploy artifact. The app has no need for routable pages beyond Part → Question selection, which is in-page state.
-
-### 3. validateQuestion() mechanism: Hand-rolled JS validator
-
-`docs/question-schema.md` defines TypeScript-level types (discriminated union, literal unions for criteria names), but **types do not run at runtime**. The actual validator is a hand-rolled JavaScript function that mirrors the pseudocode in `question-schema.md`, ported faithfully:
+**`loadQuestions()` is the single access point**, implemented per ADR-004's Phase 1/2 strategy:
 
 ```javascript
-// In scripts/schema.js — no build step, no zod/ajv dependency
-function validateQuestion(q) {
-  assert(q.part === 1 || q.part === 2 || q.part === 3);
-  assert(q.id.startsWith(`p${q.part}-`));
-  assert(q.scoringBand.min === 0);
-  assert(q.scoringBand.max === { 1: 3, 2: 4, 3: 5 }[q.part]);
-  assert(q.rubricCriteria.length > 0);
-  if (q.part === 1) assert(q.targetWords.length === 2);
-  if (q.part === 2) assert(q.emailContext != null);
-  if (q.part === 3) assert(q.essayTopic && q.essayTopic.length > 10);
+// scripts/questions.js
+export async function loadQuestions() {
+  const inline = document.getElementById('question-bank')?.textContent;
+  if (inline) {                                  // Phase 1: embedded, no fetch
+    try { return JSON.parse(inline).questions; }
+    catch { throw new Error('Embedded question bank is corrupt.'); }
+  }
+  try {                                          // Phase 2: fetch + cache
+    const data = await (await fetch('questions.json', { cache: 'no-cache' })).json();
+    localStorage.setItem('questions_cache', JSON.stringify(data));
+    return data.questions ?? data;
+  } catch {
+    const cached = localStorage.getItem('questions_cache');
+    return cached ? (JSON.parse(cached).questions ?? JSON.parse(cached)) : FALLBACK_QUESTIONS;
+  }
+}
+```
+
+**Call site and UI states.** `app.js` calls `await loadQuestions()` once at init, stores the result in `AppState`, and passes `questions` to `QuestionSelector` via props.
+
+- **Phase 1:** load is synchronous at parse; no loading UI. Failure (corrupt inline JSON) throws at init → fatal "question bank failed validation" message (a dev bug, never user data).
+- **Phase 2:** while the fetch is pending, `QuestionSelector` renders disabled dropdowns / a skeleton. On network or cache miss, it falls back to `localStorage` then `FALLBACK_QUESTIONS` and shows a non-blocking "using offline copy" notice. The UI never blocks or crashes.
+
+**Phase 1→2 is transparent to the component:** both phases return a `Question[]`, so `QuestionSelector` and `AppState` are unchanged by the migration.
+
+### 4. validateQuestion(): hand-rolled runtime validator
+
+**Decision.** A hand-rolled JS validator (no zod/ajv, no TypeScript compilation) is the runtime enforcer. `docs/question-schema.md`'s discriminated union is the design artifact; this is the enforcement. The validator is defined with a real `assert` and shared constants:
+
+```javascript
+// scripts/schema.js
+export const SCORING_BANDS = { 1: 3, 2: 4, 3: 5 };
+
+function assert(cond, msg) { if (!cond) throw new Error(`validateQuestion: ${msg}`); }
+
+export function validateQuestion(q) {
+  assert(q.part === 1 || q.part === 2 || q.part === 3, `invalid part ${q?.part}`);
+  assert(typeof q.id === 'string' && q.id.startsWith(`p${q.part}-`), `id ${q?.id} violates p${q.part}-`);
+  assert(q.scoringBand?.min === 0, 'scoringBand.min must be 0');
+  assert(q.scoringBand?.max === SCORING_BANDS[q.part], `scoringBand.max must be ${SCORING_BANDS[q.part]}`);
+  assert(Array.isArray(q.rubricCriteria) && q.rubricCriteria.length > 0, 'rubricCriteria required');
+  if (q.part === 1) assert(Array.isArray(q.targetWords) && q.targetWords.length === 2, 'Part 1 needs 2 targetWords');
+  if (q.part === 2) assert(q.emailContext != null, 'Part 2 needs emailContext');
+  if (q.part === 3) assert(typeof q.essayTopic === 'string' && q.essayTopic.length > 10, 'Part 3 needs essayTopic');
   return true;
 }
 ```
 
-**Call sites**:
+**Call sites.**
 
-- **Init time**: `validateQuestion()` runs on every question in the embedded bank (Phase 1 `questions.js`, or `questions.json` in Phase 2). Failing assertions throw before the UI renders — this is a dev-time bug, not a user-facing error.
-- **Import time**: When the user imports JSON, each question in their `questionBank` export is validated. Malformed questions are rejected with a user-facing message (not a crash), since user data crosses trust boundaries.
+- *Init (dev guard):* every question in the embedded bank is validated at startup. A failure throws before render — this catches authoring bugs, not user error.
+- *Import time (user data):* each question in an imported `questionBank` is validated inside a `try/catch`. Malformed questions are rejected with a user-facing message and skipped — never a crash, because user data crosses a trust boundary.
 
-**Why not zod/ajv?** Adds a dependency and a build step for runtime schema validation — unnecessary when the validator is already written and the schema is stable (additive-only versioning per ADR-004).
+### 5. Prompt assembly: SYSTEM_PROMPT, prompt_version, per-Part criteria, few-shot
 
-**Why not TypeScript compilation?** Would require a build step (tsc) to strip types and emit `.js`. The TypeScript interface and literal unions in `question-schema.md` serve as the type-level source of truth for future tooling, but the runtime validator is plain JS. This is a deliberate decoupling: the schema doc is the design artifact, the JS validator is the runtime enforcement.
-
-### 4. QuestionSelector + loadQuestions integration
-
-**Data contract**: `QuestionSelector` receives `{ questions: Question[], value: { part, questionId }, onChange }`. It renders a two-level selector:
-
-- **Level 1**: Dropdown or button group for Part (1, 2, 3). Filtering is by `q.part`.
-- **Level 2**: Dropdown of questions within the selected Part. Filtering is by `q.id.startsWith('p${part}-')`.
-
-**Loading strategy**:
-
-- **Phase 1** (up to ~30 questions): `questions.js` exports a `QUESTIONS` array — inlined via `<script type="module">`. `loadQuestions()` is a trivial async wrapper that resolves immediately:
-
-```javascript
-// scripts/questions.js
-export const QUESTIONS = [/** ... embedded array ... */];
-
-export async function loadQuestions() {
-  return QUESTIONS; // resolves synchronously in practice
-}
-```
-
-- **Phase 2** (separate `questions.json` file): `loadQuestions()` does `fetch('questions.json')` with a `localStorage` cache fallback and a `FALLBACK_QUESTIONS` constant for `file://` or network failure. The `catch` block parses `localStorage.getItem('questions_cache')`; if that fails too, it falls back to the built-in `FALLBACK_QUESTIONS` array (same as Phase 1).
-
-**`QuestionSelector` does not call `loadQuestions()`** itself — data loading is lifted to `AppState` in `app.js`, which calls `loadQuestions()` once at init and stores the result. Components receive the data via props, making the loading strategy transparent.
-
-### 5. SYSTEM_PROMPT and prompt assembly
-
-The monolithic `SYSTEM_PROMPT` constant is replaced by a **`PromptBuilder`** module (`scripts/promptBuilder.js`) that assembles the system prompt dynamically:
+A `PromptBuilder` module (`scripts/promptBuilder.js`) assembles the system prompt dynamically instead of a monolithic constant:
 
 ```javascript
 // scripts/promptBuilder.js
-import { RUBRIC_CRITERIA } from './schema.js';
+import { RUBRIC_CRITERIA, SCORING_BANDS } from './schema.js';
 import { FEW_SHOT_ANCHORS } from './fewShotAnchors.js';
 
-function buildSystemPrompt(part) {
-  const criteria = RUBRIC_CRITERIA[part]; // e.g. ['grammar', 'task_completion', 'word_usage']
-  const anchors = FEW_SHOT_ANCHORS[part];
-  return `
-You are an expert ETS TOEIC Writing examiner. Evaluate strictly against ETS criteria.
+export const PROMPT_VERSION = '1.0';
 
-Scoring band for this Part: ${SCORING_BANDS[part]}
-Rubric criteria to decompose: ${criteria.join(', ')}
-...
+export function buildSystemPrompt(part) {
+  return `You are an expert ETS TOEIC Writing examiner...
+Scoring band: ${SCORING_BANDS[part]}
+Rubric criteria: ${RUBRIC_CRITERIA[part].join(', ')}
 Few-shot examples:
-${anchors}
-  `;
+${FEW_SHOT_ANCHORS[part]}`;
 }
 
-function buildEvaluationPrompt(question, answer) {
-  return `
-Question Prompt:
-${question.prompt}
+export function buildEvaluationPrompt(question, answer) {
+  return `Question Prompt: ${question.prompt}
 ${question.emailContext ? `Email: ${JSON.stringify(question.emailContext)}\n` : ''}
 ${question.essayTopic ? `Essay Topic: ${question.essayTopic}\n` : ''}
 Target words: ${question.targetWords?.join(', ') || 'N/A'}
 ${question.wordTarget ? `Word target: ${question.wordTarget.min}–${question.wordTarget.max} words\n` : ''}
-
-Student Answer:
-${answer}
-  `;
+Student Answer: ${answer}`;
 }
 ```
 
-**Key decisions**:
+- **Rubric criteria** come from `RubricCriteriaPart1/2/3` in `docs/question-schema.md`, exposed as the `RUBRIC_CRITERIA` constant in `schema.js` — never hardcoded strings.
+- **Few-shot anchors** (ADR-002 Tier 2 #1) live in `fewShotAnchors.js`, one pair per Part, paraphrased for copyright safety.
+- **`PROMPT_VERSION`** is a constant bumped on any prompt change and returned in the evaluation `provenance` fields per ADR-002 §Tier 1 #4.
 
-- Criteria names come from `RubricCriteriaPart1/2/3` in `question-schema.md` — imported as constants from `schema.js`, never hardcoded in strings.
-- Few-shot anchors (ADR-002 Tier 2 #1) are stored in a separate `fewShotAnchors.js` module — one pair per Part, paraphrased for copyright safety.
-- `prompt_version` is a constant in `PromptBuilder` — bumped whenever the system prompt changes. Returned in the evaluation response `provenance` fields per ADR-002 §Tier 1 #4.
+### 6. Model dropdown: baked-in list from model-provider-guide.md
 
-### 6. Model dropdown: baked-in static list
-
-The dropdown is populated from a **hardcoded** `STABLE_MODELS` array and a `TEMPERATURE_SUPPORT` map in `scripts/modelDropdown.js`, sourced from `model-provider-guide.md` at implementation time. No `models.list()` API call is made at runtime.
+The dropdown renders from `STABLE_MODELS` and `TEMPERATURE_SUPPORT` in `scripts/models.js`, which is a **runtime mirror of `docs/model-provider-guide.md`**. The guide is the source of truth (human-readable, re-verified before each release per ADR-002 Tier 1 #3); `models.js` is the copy the UI imports. ADR-003 does not embed the list — it references the guide.
 
 ```javascript
-// scripts/modelDropdown.js
-const STABLE_MODELS = [
-  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', temperatureSupported: false },
-  { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', temperatureSupported: false },
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', temperatureSupported: false },
-];
+// scripts/models.js — values mirrored from docs/model-provider-guide.md
+export const STABLE_MODELS = [ /* { id, label } per guide */ ];
+export const TEMPERATURE_SUPPORT = { /* id -> bool per guide */ };
 
-function getTemperature(modelId) {
-  const model = STABLE_MODELS.find(m => m.id === modelId);
-  return model?.temperatureSupported ? 0.2 : undefined; // undefined = omit from generationConfig
+// scripts/components/modelDropdown.js
+import { STABLE_MODELS, TEMPERATURE_SUPPORT } from '../models.js';
+export function getTemperature(modelId) {
+  return TEMPERATURE_SUPPORT[modelId] ? 0.2 : undefined; // undefined -> omit from generationConfig
 }
 ```
 
-**Update rule**: When `model-provider-guide.md` is updated (before each release per ADR-002), the `STABLE_MODELS` array in this file must be re-synced manually. This is an explicit checklist item in the release process (linked to ADR-002 Tier 1 #3).
+`getTemperature()` applies ADR-002's conditional-temperature determinism rule: set `0.2` only where the model supports it; otherwise omit the parameter.
 
-**Live discovery**: Not implemented. ADR-001 §Constraints requires offline-capable UI. A live `models.list()` call would fail offline and silently empty the dropdown. If the user wants a "refresh model list" button in v2, that is an enhancement, not a dependency.
+**Offline by default.** The dropdown ships with the baked-in `STABLE_MODELS`. The provider guide's suggestion to call `GET …/v1beta/models` at *implementation* time is a maintainer instruction, not a runtime dependency — a live `models.list()` at runtime would fail offline and empty the dropdown, violating ADR-001. Live discovery, if ever added (v2 "refresh" button), would *augment* the baked-in list, never replace it.
 
-### 7. Dead-model recovery: one banner, two triggers
+### 7. Shared dead-model recovery banner: one component, two call sites
 
-A single `ModelRecoveryBanner` component (`scripts/components/modelRecoveryBanner.js`) renders a dismissible alert using the canonical recovery copy from ADR-002 §Tier 1 #3 — *"The model in your exported settings is no longer available. Please select a different model above."* — with a dropdown of `STABLE_MODELS`.
-
-It is triggered from **two call sites** (per ADR-002 and ADR-004), not implemented as two separate UIs:
-
-- **ADR-004 trigger (import-time)**: After parsing imported JSON, if `selectedModel` is not in `STABLE_MODELS`, show the banner pre-filled with the deprecated model ID.
-- **ADR-002 trigger (runtime)**: In `evaluateAnswer()`, if the provider returns HTTP 400/404 for the selected model, catch the error, show the banner, and block further submissions until the user reselects.
-
-Both call sites share the same `showModelRecovery(deprecatedModelId)` function, which mounts the banner and returns the user's reselection via a callback.
-
-### 8. Rendering safety: DOMPurify (already integrated)
-
-All markdown rendered from Gemini's response is sanitized with **DOMPurify** (already loaded via CDN in `index.html`):
+A single `ModelRecoveryBanner` component (`scripts/components/modelRecoveryBanner.js`) is defined once and triggered from two places:
 
 ```javascript
-const html = DOMPurify.sanitize(marked.parse(markdownText));
-analysisResult.innerHTML = html;
+// scripts/components/modelRecoveryBanner.js
+import { STABLE_MODELS } from '../models.js';
+export function showModelRecovery(deprecatedModelId, onReselect) {
+  // dismissible banner using the ADR-002 §Tier 1 #3 canonical copy:
+  // "The model in your exported settings is no longer available. Please select a different model above."
+  // + dropdown of STABLE_MODELS; onReselect(modelId) updates AppState and clears the banner
+}
 ```
 
-**Non-negotiable**: No `innerHTML` assignment from LLM output without `DOMPurify.sanitize()`. The existing `index.html` already does this correctly; the pattern must be preserved in the restructured code.
+- **ADR-004 trigger (import time):** after parsing imported JSON, if `selectedModel` is not in `STABLE_MODELS`, call `showModelRecovery(imported.selectedModel, …)`.
+- **ADR-002 trigger (runtime):** in `evaluateAnswer()`, on HTTP 400/404 for the selected model, catch the error, call `showModelRecovery(AppState.get('selectedModel'), …)`, and block further submissions until the user reselects.
 
-**Error response fields** (`error_analysis`, `polished_revision`, `key_recommendations`): These come from a prompt-constrained LLM but could still contain prompt-injection payloads if the user pastes malicious content into the textarea. DOMPurify is the safety layer; it strips `<script>`, event handlers, and other XSS vectors.
+Both share the same `showModelRecovery()` — not two UIs.
+
+### 8. Rendering safety: sanitize all model HTML
+
+Gemini's `error_analysis`, `polished_revision`, and `key_recommendations` are rendered as HTML via Marked.js. They are prompt-constrained but not trusted: a user can paste malicious content into the answer textarea that surfaces in the model's output. Every field is sanitized before injection:
+
+```javascript
+const html = DOMPurify.sanitize(marked.parse(markdown));
+examinerOutput.innerHTML = html;
+```
+
+No `innerHTML` assignment from model output without `DOMPurify.sanitize()`. This pattern already exists in `index.html` and must be preserved through the restructure.
 
 ### 9. CDN fallback: unstyled but functional
 
-**"Offline-capable UI"** (ADR-001 §Driving Requirements #5) is defined as: **all functionality works without CDN resources, but the UI is unstyled**.
+"Offline-capable UI" (ADR-001) is defined as **all functionality works without CDN resources; styling degrades**.
 
-- **Tailwind (CDN)**: purely presentational. If the CDN fails, the page renders with browser default styles — all buttons, inputs, and text are still functional. No layout, but no broken functionality.
-- **Marked.js (CDN)**: Required for rendering evaluation output. If the CDN fails, `evaluateAnswer()` detects the missing `marked` global and displays: *"Marked.js failed to load — evaluation output cannot be rendered. Check your network connection."* The evaluation API call is suppressed (no wasted quota).
-- **DOMPurify (CDN)**: Required for safe rendering. If the CDN fails, rendering is blocked entirely with the same message above. Safe defaults — never render unsanitized HTML.
+- **Tailwind (CDN):** presentational only. If it fails, the page renders with browser-default styles — every control still works, just unstyled.
+- **Marked.js (CDN):** required to render evaluation output. If missing, `evaluateAnswer()` detects the absent global, suppresses the API call (no wasted quota), and shows: *"Rendering libraries failed to load — evaluation output cannot be displayed. Check your connection."*
+- **DOMPurify (CDN):** required for safe rendering. If missing, rendering is blocked entirely with the same message — safe default, never render unsanitized HTML.
 
-**Why not vendor local fallbacks?** Three library copies (Tailwind ~500 KB, Marked ~30 KB, DOMPurify ~10 KB) checked into the repo would bloat the deployment. The presentational degradation (no Tailwind) is acceptable; the functional degradation (no Marked/DOMPurify) is blocked with a clear message. If the user wants full offline rendering in v2, this is an explicit tradeoff to revisit.
+**No vendored fallback.** Checking Tailwind (~500 KB), Marked (~30 KB), and DOMPurify (~10 KB) into the repo would bloat the deployment for a degradation path that is acceptable as-is. A ~20-line critical-CSS block for basic layout is a noted v2 enhancement.
 
-**Future option**: A minimal `<style>` block with ~20 lines of critical CSS could provide basic layout without Tailwind. Noted but not implemented in v1.
+### 10. State management: plain module-level store
 
-### 10. State management: singleton `AppState`
-
-A single `AppState` singleton (`scripts/store.js`) holds all cross-cutting state with a `get()`/`set()`/`subscribe()` API:
+A single `AppState` singleton (`scripts/store.js`) holds all cross-cutting state with `get()` / `set()` / `subscribe()`:
 
 ```javascript
-const AppState = {
+// scripts/store.js
+export const AppState = {
   data: {
-    apiKey: '',
-    selectedModel: 'gemini-3.6-flash',
-    selectedPart: 1,
-    selectedQuestionId: 'p1-001',
-    currentAnswer: '',
-    answerHistory: [],
-    settings: { autoSave: true, highConfidenceMode: false },
-    questions: [],
-    stableModels: STABLE_MODELS,
+    apiKey: '', selectedModel: '', selectedPart: 1, selectedQuestionId: '',
+    currentAnswer: '', answerHistory: [], settings: { autoSave: true, highConfidenceMode: false },
+    questions: [], capabilities: {}, // capabilities: derived model flags (e.g. temperature support)
   },
-  get(key) { return this.data[key]; },
-  set(key, value) {
-    this.data[key] = value;
-    this._subscribers.forEach(cb => cb(key, value));
-  },
-  subscribe(cb) { this._subscribers.push(cb); },
-  // Persistence helpers
-  save() { /* localStorage with try-catch, per ADR-001 */ },
-  export() { /* JSON per ADR-001/ADR-004 */ },
+  get(k) { return this.data[k]; },
+  set(k, v) { this.data[k] = v; this._subs.forEach(cb => cb(k, v)); },
+  subscribe(cb) { this._subs.push(cb); },
+  save() { /* localStorage, try/catch, per ADR-001 */ },
+  export() { /* JSON, per ADR-001/ADR-004 */ },
   import(json) { /* validates questions, checks model, per ADR-004 */ },
 };
 ```
 
-**Why not Redux/Zustand/jotai?** All add bundle size and cognitive overhead. A singleton with subscribe is sufficient for state that lives across 5–10 components. If the app grows beyond ~2000 lines of component code, revisit in a new ADR.
+No Redux/Zustand/jotai — a singleton with `subscribe()` is sufficient for state shared across 5–10 components. Components subscribe and re-render on the slices they care about; `AppState` is the single owner of selection, model, answer, history, settings, and the capability map.
 
-**Why not `useStore` hooks?** No framework, no React. The subscribe pattern is the vanilla equivalent.
+### 11. General API error handling: one shared pattern
 
-### 11. General API error handling
-
-A shared `handleApiError(error, response)` function in `scripts/evaluator.js` classifies and surfaces errors:
+All API failures route through one `handleApiError(error, response)` in `scripts/evaluator.js`:
 
 ```javascript
-function handleApiError(error, response) {
-  if (response?.status === 429) {
-    return 'Rate limit exceeded. Please wait a moment and try again.';
-  }
+// scripts/evaluator.js
+export function handleApiError(error, response) {
+  if (response?.status === 429) return 'Rate limit exceeded. Wait a moment and try again.';
   if (response?.status === 400 || response?.status === 404) {
-    const msg = error.message;
-    if (msg.includes('model') || msg.includes('not found')) {
-      // Dead-model recovery path (shared with ADR-004)
-      showModelRecovery(AppState.get('selectedModel'));
-      return null; // suppresses generic error message
-    }
-    return `API error: ${msg}`;
+    showModelRecovery(AppState.get('selectedModel')); // ADR-002 dead-model path (shared with §7)
+    return null; // suppresses the generic message
   }
-  if (response?.status === 401 || response?.status === 403) {
-    return 'Invalid API key. Please check and re-enter your Gemini API key.';
-  }
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
-    return 'Network error. Check your connection and try again.';
-  }
-  return error.message;
+  if (response?.status === 401 || response?.status === 403) return 'Invalid API key. Please re-enter your Gemini API key.';
+  if (error?.name === 'TypeError') return 'Network error. Check your connection and try again.';
+  return 'Evaluation failed. Please try again.'; // generic — never a raw API dump
 }
 ```
 
-**Key principle**: Error messages are user-facing strings, never raw API error dumps (which could leak internal details). Each error class has a specific, actionable message. The 400/404 model-deprecation path delegates to the shared `ModelRecoveryBanner` rather than creating a new UI.
+Each class has one actionable, user-facing message; raw API error text is never surfaced. The 400/404 model-deprecation path delegates to the shared `ModelRecoveryBanner` rather than spawning a new UI.
 
 ## Alternatives Considered
 
-### A1. Alpine.js (CDN-loadable, no build step)
-
-- **Pros**: Component-level reactivity (`x-data`), CDN-loadable, ~10 KB gzipped, maps naturally from imperative DOM thinking
-- **Cons**: Adds a dependency; different paradigm from existing `index.html`; the reactivity model is unnecessary for an app this small (5–10 components, infrequent UI updates)
-- **Verdict**: Kept as the **recommended upgrade path** if the app outgrows vanilla modules. Not adopted now because the component count is low and the existing code already works.
-
-### A2. React + Vite (dev-only build, committed static output)
-
-- **Pros**: Mature ecosystem, extensive tooling, clear component mental model, user explicitly considered it
-- **Cons**: Violates the spirit of ADR-001's "no build pipelines" constraint; requires `npm install` and a maintainer toolchain; bundle size (~40+ KB) for an app with <50 questions
-- **Verdict**: **Rejected.** Only acceptable if ADR-001 is amended in a new ADR. The cost/benefit does not justify the complexity at this stage.
-
-### A3. Preact + htm (CDN-loadable JSX alternative)
-
-- **Pros**: CDN-loadable, ~10 KB gzipped, JSX-like syntax without a build step
-- **Cons**: Still a framework dependency; `htm` tagged-template syntax is unfamiliar to curators; no clear advantage over vanilla modules at this scale
-- **Verdict**: **Rejected.** Overkill for the current component count.
-
-### A4. Lit (Web Components standard)
-
-- **Pros**: Standards-based, framework-agnostic, good DX for custom elements
-- **Cons**: Adds ~15 KB; custom element lifecycle (connectedCallback, observedAttributes) is more ceremony than the simple `render()/update()/destroy()` pattern used here
-- **Verdict**: **Rejected.** Not enough component complexity to justify the overhead.
-
-### A5. Zod/ajv runtime validation
-
-- **Pros**: Declarative schema, auto-generated validators, strong type inference
-- **Cons**: Adds a dependency; the `validateQuestion()` pseudocode is already written and simple enough to port to JS directly; schema changes are rare (additive-only versioning per ADR-004)
-- **Verdict**: **Rejected.** Hand-rolled validator is simpler, dependency-free, and matches the no-build-step constraint.
+- **A1. Alpine.js (CDN, no build).** Rejected: reactivity is unnecessary at this scale; kept as the recommended upgrade path if the component count grows. Does not violate ADR-001's spirit.
+- **A2. React + Vite (dev-only build, committed output).** Rejected: would require amending ADR-001's no-build constraint; adds an npm toolchain; ~40 KB for an app with a small question bank.
+- **A3. Preact + htm (CDN).** Rejected: still a framework dependency; tagged-template syntax is unfamiliar to curators; no advantage over vanilla at this scale.
+- **A4. Lit (Web Components).** Rejected: ~15 KB; the custom-element lifecycle is more ceremony than `render()` / `update()` / `destroy()`.
+- **A5. zod / ajv runtime validation.** Rejected: adds a dependency and/or build step; the hand-rolled validator is already written and matches the no-build constraint.
+- **A6. Redux / Zustand / jotai for state.** Rejected: bundle size and cognitive overhead unjustified for 5–10 components; the subscribe singleton suffices.
 
 ## Consequences
 
 ### Positive
 
-- **Zero constraint violations**: Stays fully within ADR-001's scope (no build pipeline, single static HTML, GitHub Pages, BYOK, offline-capable).
-- **Low migration risk**: The existing `index.html` already works. The restructure is a pure refactor — same dependencies, same deployment, just better-organized code.
-- **Type-safe at the design level**: The TypeScript discriminated union in `question-schema.md` serves as the type-level contract; the hand-rolled JS validator enforces the same rules at runtime. Two complementary layers.
-- **Component contract is framework-portable**: The `createComponent(props, ctx) → { render(), update(), destroy() }` pattern maps trivially to Alpine.js, Lit, or React components if a future ADR adopts a framework.
-- **Error handling is centralized**: One `handleApiError()` function for all API failures, with the dead-model recovery path shared between ADR-002 and ADR-004.
+- **Zero ADR-001 violations.** No build pipeline, single static HTML, GitHub Pages, BYOK, offline-capable — all preserved.
+- **Model config delegated, not duplicated.** `STABLE_MODELS` / `TEMPERATURE_SUPPORT` live in `model-provider-guide.md` (source of truth) and `scripts/models.js` (mirror); this ADR references them, avoiding the staleness of an embedded list.
+- **Framework-portable contracts.** The `render()` / `update()` / `destroy()` pattern maps to Alpine/Lit/React if a future ADR adopts one.
+- **Centralized error + recovery.** One `handleApiError()` and one `ModelRecoveryBanner` serve every call site and both ADR-002/ADR-004 triggers.
+- **Safe rendering, deliberate state.** DOMPurify on all model HTML; one explicit `AppState` shape instead of ad-hoc globals.
 
 ### Negative
 
-- **Manual state management**: No reactivity framework means components must explicitly re-render when state changes. At 5–10 components this is manageable via `AppState.subscribe()`. At 50+ it would become painful.
-- **No hot-reloading**: Curator edits to `.js` files require a browser refresh. Acceptable for a static site.
-- **TypeScript types are documentation-only**: The discriminated union lives in the schema doc, not compiled. Runtime enforcement relies on the hand-rolled validator staying in sync.
+- **Manual model-list sync.** `models.js` must be re-synced from the guide before each release. Intentional (per ADR-002 Tier 1 #3) and already a checklist item.
+- **Manual re-render.** Without a reactivity framework, components must explicitly re-render on state change via `subscribe()`. Manageable at this scale; painful beyond ~50 components.
+- **TypeScript types are documentation-only.** Runtime enforcement relies on the hand-rolled validator staying in sync with `question-schema.md`.
+- **Unstyled degradation.** If the Tailwind CDN fails, the UI works but looks bare until a v2 critical-CSS block lands.
 
 ### Neutral
 
-- **File structure is explicit**: 10+ files in `/scripts/` is more files than a single `index.html`, but each has a clear purpose. The bundler-free approach means each file is loaded individually by the browser (more HTTP requests), but HTTP/2 multiplexing + small file sizes make this irrelevant at this scale.
-- **Model list is hardcoded**: Requires manual sync with `model-provider-guide.md` before each release. This is intentional (see §6 Update rule) and is already a checklist item per ADR-002.
-- **`questions.js` vs `questions.json`**: The Phase 2 migration from inlined array to `fetch()` is designed to be transparent to `QuestionSelector` — both paths produce a `Question[]` that `AppState` stores.
-- **Offline rendering**: Tailwind-only fallback (unstyled but functional) is a deliberate tradeoff. A 20-line critical CSS block is a noted v2 enhancement.
+- **Multi-file load.** More HTTP requests than one `index.html`, irrelevant at this scale under HTTP/2.
+- **Phase 1→2 is transparent.** Both phases return `Question[]`; `QuestionSelector` is unaffected by the migration.
+- **Offline = unstyled-but-functional.** A deliberate tradeoff; full offline rendering is a noted v2 enhancement.
 
 ## Cross-References
 
-- **ADR-001**: Defines the no-build, single-static-HTML, GitHub-Pages, BYOK, offline-capable constraints this ADR respects. §3 (validateQuestion) and §10 (state management) directly implement ADR-001 scope items.
-- **ADR-002**: §7 (error handling) and §7 (dead-model recovery) integrate with ADR-002's Tier 1 #3 (runtime 4xx recovery). §5 (prompt assembly) injects ADR-002's per-Part rubric criteria and few-shot anchors.
-- **ADR-004**: §4 (loadQuestions + QuestionSelector) and §7 (dead-model recovery import-time check) implement ADR-004's documented pseudocode and recovery flow. §3 (validateQuestion) enforces the schema from `question-schema.md`.
-- **`docs/question-schema.md`**: The TypeScript discriminated union + `validateQuestion()` pseudocode this ADR ports to JS.
-- **`docs/model-provider-guide.md`**: Source of the `STABLE_MODELS` array and `TEMPERATURE_SUPPORT` map in §6.
+- **ADR-001** — honors the no-build / single-static-HTML / GitHub-Pages / BYOK / offline constraints; resolves the "build pipelines" out-of-scope item with an explicit no-build decision.
+- **ADR-002** — §Tier 1 #3 (shared dead-model recovery banner, §7), §Tier 1 #4 (`prompt_version` provenance, §5), §Tier 2 #1 (few-shot anchors, §5), and the conditional-temperature determinism strategy (§6).
+- **ADR-004** — import-time dead-model check (§7 call site 1) and the Phase 1/2 question storage + `loadQuestions()` pseudocode that §3 implements.
+- **`docs/question-schema.md`** — the TypeScript discriminated union and `validateQuestion()` pseudocode this ADR ports to runtime (§4); source of `RUBRIC_CRITERIA` / `RubricCriteriaPart1/2/3` (§5).
+- **`docs/model-provider-guide.md`** — source of truth for `STABLE_MODELS` and `TEMPERATURE_SUPPORT`, mirrored into `scripts/models.js` (§6).
