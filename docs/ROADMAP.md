@@ -9,7 +9,7 @@ conflict, docs win as design and `index.html` is brought into conformance.
 ## Current state
 
 - `index.html` — monolithic single-page app; no build step (ADR-001, ADR-003 D1).
-- Question bank — 9 embedded questions, ADR-004 Phase 1 (inline JSON in `index.html`).
+- Question bank — 18 embedded questions (6 per Part), ADR-004 Phase 1 (inline JSON in `index.html`); still below the ~30-question / 50 KB split trigger.
 - Model selection dropdown — **done**; inline `MODELS` mirror of
   `docs/model-provider-guide.md`; defaults to **Gemini 3.6 Flash** (Gemini 2.5
   Flash / 2.5 Flash-Lite removed — both return HTTP 404 as of 2026-08-16);
@@ -137,9 +137,13 @@ Run before every release:
 
 ### P2 — Feature growth & UX
 
-1. **Question-bank growth (ADR-004).** Add original questions (copy-edit + human
-   review gate) toward the ~30-question / 50 KB trigger for Phase 2
-   (`questions.json` + `fetch`/cache). Export/import stays additive.
+1. **Question-bank growth (ADR-004)** — **DONE (batch 1).** Grew the embedded,
+   original question bank from 9 → 18 questions (6 per Part; all pass
+   `validateQuestion`). Stays embedded as JSON in `#questionBank` (parsed
+   synchronously, file://-safe — no `fetch`), consistent with ADR-004 Phase 1 and
+   ADR-001. The `questions.json` + `fetch`/cache split stays deferred with
+   ADR-003/ADR-005 until the ~30-question / 50 KB trigger. New prompts are
+   assistant-authored and still need the human review gate before a release.
 2. **Persistent cross-reload history** (localStorage) — **DONE.** Each successful
    evaluation is saved (prompt, answer, structured feedback, model, calibration flag,
    prompt version) under `gemini_eval_history` and survives a reload; a collapsible
