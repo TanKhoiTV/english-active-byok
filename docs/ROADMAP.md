@@ -11,14 +11,16 @@ conflict, docs win as design and `index.html` is brought into conformance.
 - `index.html` — monolithic single-page app; no build step (ADR-001, ADR-003 D1).
 - Question bank — 9 embedded questions, ADR-004 Phase 1 (inline JSON in `index.html`).
 - Model selection dropdown — **done**; inline `MODELS` mirror of
-  `docs/model-provider-guide.md`; defaults to Gemini 2.5 Flash; persisted in
-  `localStorage`.
+  `docs/model-provider-guide.md`; defaults to **Gemini 3.6 Flash** (Gemini 2.5
+  Flash / 2.5 Flash-Lite removed — both return HTTP 404 as of 2026-08-16);
+  persisted in `localStorage`.
 
 ### Conformance status (accepted ADRs vs. `index.html`)
 
 | Accepted requirement | Status in `index.html` |
 | --- | --- |
-| ADR-006: `handleApiError()` + `ModelRecoveryBanner` + dead-model recovery (HTTP 400/404 → reselect) | **Implemented** (P0, commit `055c508`) |
+| ADR-006: `handleApiError()` four-class classification (429 / 400·404 / 401·403 / network) + raw API message surfaced | **Implemented** (P0, commit `055c508`; raw-message rephrased `8c01de8`) |
+| ADR-006: `ModelRecoveryBanner` dead-model recovery (HTTP 400/404 → reselect) | **Removed / deferred** — banner element deleted in `8c01de8` to fix header layout; error classification + raw message retained. Re-add after layout settled. |
 | ADR-006: init-time validator **throws** on authoring mistakes | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T1#1: structured output (`responseSchema`) + per-criterion decomposition | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T1#4: `PROMPT_VERSION` + provenance + "AI estimate" disclaimer | **Implemented** (P0, commit `055c508`) |
@@ -81,6 +83,19 @@ All contained to `index.html`; no new dependencies, no build step.
 question from each Part with a valid key; confirm structured output renders, the
 disclaimer + provenance show, and that an invalid model id / bad key produces the
 classified banner rather than a raw error.
+
+**Follow-up fixes completed after `055c508` (still P0 scope, no open items):**
+
+- Dead-model fix (`cb3b926`): removed `gemini-2.5-flash` /
+  `gemini-2.5-flash-lite` from `MODELS` (both return HTTP 404 as of 2026-08-16)
+  and defaulted to `gemini-3.6-flash`.
+- Header UI cleanup (`8c01de8`, `10a32f9`, `d944d36`, `8a7ac7c`): dropped the top
+  `#recoveryBanner`, kept `#keyStatus` as a right-aligned block below the controls,
+  render `Estimated Score: X/max` and per-criterion `score/max`, and rephrased the
+  bottom error text to classify (key / model / rate-limit / network) and show the
+  raw API message.
+- a11y (`9dc7e92`): associated `Select Question Prompt` → `#questionSelect` and
+  `Your Written Response` → `#userInput`.
 
 ### P1 — Reliability hardening (optional, lower priority)
 
