@@ -1,80 +1,287 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TOEIC Writing Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TOEIC Writing Practice</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-</head>
-
-<body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
-  <div class="max-w-3xl mx-auto space-y-6">
-
-    <!-- API Key Header Config -->
-    <div
-      class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-      <div>
-        <h1 class="font-bold text-lg text-gray-900">TOEIC Writing Assistant</h1>
-        <p class="text-xs text-gray-500">Practice TOEIC Writing with direct AI feedback</p>
-      </div>
-      <div class="flex gap-2 w-full sm:w-auto">
-        <input id="apiKeyInput" type="password" placeholder="Paste Gemini API Key"
-          class="border border-gray-300 rounded px-3 py-1 text-sm flex-1 sm:w-64">
-        <button onclick="saveKey()"
-          class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded transition">Save</button>
-        <button onclick="clearKey()"
-          class="border border-gray-300 text-gray-600 text-sm px-4 py-1 rounded transition">Clear</button>
-        <span id="keyStatus" class="text-xs text-gray-500 min-w-[120px] h-5"></span>
-      </div>
-    </div>
-
-    <!-- Practice Section -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Select Question Prompt</label>
-        <select id="questionSelect" onchange="loadQuestion()"
-          class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
-          <option value="0">Part 1: Write a sentence based on a picture (Words: schedule, reschedule)</option>
-          <option value="1">Part 2: Respond to an email request (Subject: Office renovation schedule)</option>
-          <option value="2">Part 3: Opinion Essay (Topic: Remote work vs. Office work)</option>
-        </select>
-      </div>
-
-      <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-        <h2 class="text-xs font-bold text-blue-700 uppercase tracking-wide">Question Task</h2>
-        <p id="questionPromptText" class="text-sm text-blue-900 mt-1 font-medium"></p>
-      </div>
-
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Your Written Response</label>
-        <textarea id="userInput" oninput="updateWordCount()" rows="8"
-          class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          placeholder="Type your answer here..."></textarea>
-        <div class="flex justify-between text-xs text-gray-500 mt-1">
-          <span id="wordCount">0 words</span>
-          <span>TOEIC Part 3 target: ~300 words</span>
+  <body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
+    <div class="max-w-3xl mx-auto space-y-6">
+      <!-- API Key Header Config -->
+      <div
+        class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3"
+      >
+        <div>
+          <h1 class="font-bold text-lg text-gray-900">
+            TOEIC Writing Assistant
+          </h1>
+          <p class="text-xs text-gray-500">
+            Practice TOEIC Writing with direct AI feedback
+          </p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <input
+            id="apiKeyInput"
+            type="password"
+            placeholder="Paste Gemini API Key"
+            class="border border-gray-300 rounded px-3 py-1 text-sm flex-1 sm:w-64"
+          />
+          <button
+            onclick="saveKey()"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded transition"
+          >
+            Save
+          </button>
+          <button
+            onclick="clearKey()"
+            class="border border-gray-300 text-gray-600 text-sm px-4 py-1 rounded transition"
+          >
+            Clear
+          </button>
+          <span
+            id="keyStatus"
+            class="text-xs text-gray-500 min-w-[120px] h-5"
+          ></span>
         </div>
       </div>
 
-      <button id="submitBtn" onclick="evaluateAnswer()"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition shadow">
-        Submit for Evaluation
-      </button>
+      <!-- Practice Section -->
+      <div
+        class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4"
+      >
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"
+            >Select Question Prompt</label
+          >
+          <select
+            id="questionSelect"
+            onchange="loadQuestion()"
+            class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white"
+          ></select>
+        </div>
+
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+          <h2 class="text-xs font-bold text-blue-700 uppercase tracking-wide">
+            Question Task
+          </h2>
+          <div
+            id="questionPromptText"
+            class="text-sm text-blue-900 mt-1 font-medium"
+          ></div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"
+            >Your Written Response</label
+          >
+          <textarea
+            id="userInput"
+            oninput="updateWordCount()"
+            rows="8"
+            class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="Type your answer here..."
+          ></textarea>
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span id="wordCount">0 words</span>
+            <span id="wordTargetHint"></span>
+          </div>
+        </div>
+
+        <button
+          id="submitBtn"
+          onclick="evaluateAnswer()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition shadow"
+        >
+          Submit for Evaluation
+        </button>
+      </div>
+
+      <!-- Analysis Output -->
+      <div
+        id="outputContainer"
+        class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200"
+      >
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">
+          Examiner Evaluation
+        </h2>
+        <div
+          id="analysisResult"
+          class="prose prose-sm max-w-none text-gray-700 space-y-2"
+        ></div>
+      </div>
     </div>
 
-    <!-- Analysis Output -->
-    <div id="outputContainer" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">Examiner Evaluation</h2>
-      <div id="analysisResult" class="prose prose-sm max-w-none text-gray-700 space-y-2"></div>
-    </div>
+    <!-- Question bank (ADR-004 Phase 1): embedded JSON, parsed synchronously by loadQuestions() -->
+    <script type="application/json" id="questionBank">
+      {
+        "schemaVersion": 1,
+        "questions": [
+          {
+            "part": 1,
+            "id": "p1-001",
+            "prompt": "Write ONE sentence based on a picture. Use the TWO words or phrases: 'conference' and 'reschedule'.",
+            "targetWords": ["conference", "reschedule"],
+            "scoringBand": { "min": 0, "max": 3 },
+            "rubricCriteria": ["grammar", "task_completion", "word_usage"],
+            "imageUrl": null,
+            "imageAlt": "A conference room with a manager and two employees at a table with charts and a laptop."
+          },
+          {
+            "part": 1,
+            "id": "p1-002",
+            "prompt": "Write ONE sentence based on a picture. Use the TWO words or phrases: 'deadline' and 'postpone'.",
+            "targetWords": ["deadline", "postpone"],
+            "scoringBand": { "min": 0, "max": 3 },
+            "rubricCriteria": ["grammar", "task_completion", "word_usage"],
+            "imageUrl": null,
+            "imageAlt": "A project board covered with sticky notes and a wall calendar showing several overdue tasks."
+          },
+          {
+            "part": 1,
+            "id": "p1-003",
+            "prompt": "Write ONE sentence based on a picture. Use the TWO words or phrases: 'warehouse' and 'deliver'.",
+            "targetWords": ["warehouse", "deliver"],
+            "scoringBand": { "min": 0, "max": 3 },
+            "rubricCriteria": ["grammar", "task_completion", "word_usage"],
+            "imageUrl": null,
+            "imageAlt": "A large warehouse with stacked boxes and a forklift near the loading dock."
+          },
+          {
+            "part": 2,
+            "id": "p2-001",
+            "prompt": "You received the following email. Read it carefully, then write your response.",
+            "emailContext": {
+              "from": "Sara Kim, Project Coordinator",
+              "to": "Team Member",
+              "subject": "Project Kickoff Meeting Time",
+              "sent": "September 12, 11:00 A.M.",
+              "body": "We need to schedule our project kickoff meeting for next week. I am free on Tuesday or Thursday afternoon. Please reply with your preferred time and let me know if anything else is on your calendar."
+            },
+            "directives": [
+              "State your preferred meeting time",
+              "Give two reasons for your preference",
+              "Ask one question about the meeting agenda"
+            ],
+            "scoringBand": { "min": 0, "max": 4 },
+            "rubricCriteria": [
+              "sentence_quality_variety",
+              "vocabulary",
+              "organization"
+            ]
+          },
+          {
+            "part": 2,
+            "id": "p2-002",
+            "prompt": "You received the following email. Read it carefully, then write your response.",
+            "emailContext": {
+              "from": "Mr. David Lee, Training Manager",
+              "to": "New Employee",
+              "subject": "Onboarding Training Session",
+              "sent": "October 5, 9:30 A.M.",
+              "body": "Welcome to the team! We would like to set up your first training session. Please tell us whether you prefer an in-person or online session, and share a little about your background so we can tailor the material."
+            },
+            "directives": [
+              "State your preferred training format",
+              "Give two reasons for your choice",
+              "Ask one question about the training materials"
+            ],
+            "scoringBand": { "min": 0, "max": 4 },
+            "rubricCriteria": [
+              "sentence_quality_variety",
+              "vocabulary",
+              "organization"
+            ]
+          },
+          {
+            "part": 2,
+            "id": "p2-003",
+            "prompt": "You received the following email. Read it carefully, then write your response.",
+            "emailContext": {
+              "from": "Ms. Anna Park, Office Manager",
+              "to": "Employee",
+              "subject": "Proposed Office Relocation",
+              "sent": "November 8, 4:15 P.M.",
+              "body": "We are considering moving our team to a smaller office on the fifth floor. Please share your thoughts on this change and let us know how it might affect your daily routine."
+            },
+            "directives": [
+              "State your opinion on the relocation",
+              "Give two reasons to support your opinion",
+              "Ask one question about the moving schedule"
+            ],
+            "scoringBand": { "min": 0, "max": 4 },
+            "rubricCriteria": [
+              "sentence_quality_variety",
+              "vocabulary",
+              "organization"
+            ]
+          },
+          {
+            "part": 3,
+            "id": "p3-001",
+            "prompt": "Write an opinion essay. In your essay, be sure to state your opinion, develop your ideas with reasons and examples, and organize your response effectively.",
+            "title": "Remote Work vs. Office for New Hires",
+            "essayTopic": "Some companies require new employees to work in the office for their first year, while others allow remote work from day one. Which policy do you think is better for helping employees succeed? Use specific reasons and examples to support your opinion.",
+            "scoringBand": { "min": 0, "max": 5 },
+            "rubricCriteria": [
+              "thesis_and_support",
+              "grammar",
+              "vocabulary",
+              "organization"
+            ],
+            "wordTarget": {
+              "min": 250,
+              "max": 350,
+              "hint": "TOEIC Part 3 target: ~300 words"
+            }
+          },
+          {
+            "part": 3,
+            "id": "p3-002",
+            "prompt": "Write an opinion essay. In your essay, be sure to state your opinion, develop your ideas with reasons and examples, and organize your response effectively.",
+            "title": "Best Way to Learn Business English",
+            "essayTopic": "Many professionals want to improve their English for work. Some study in a classroom, others use mobile apps, and some learn through daily conversation with colleagues. Which method do you think is most effective? Use specific reasons and examples to support your opinion.",
+            "scoringBand": { "min": 0, "max": 5 },
+            "rubricCriteria": [
+              "thesis_and_support",
+              "grammar",
+              "vocabulary",
+              "organization"
+            ],
+            "wordTarget": {
+              "min": 250,
+              "max": 350,
+              "hint": "TOEIC Part 3 target: ~300 words"
+            }
+          },
+          {
+            "part": 3,
+            "id": "p3-003",
+            "prompt": "Write an opinion essay. In your essay, be sure to state your opinion, develop your ideas with reasons and examples, and organize your response effectively.",
+            "title": "Free Meals at Work",
+            "essayTopic": "Some companies provide free meals to employees to save time and build team spirit, while others believe workers should manage their own lunch breaks. Do you think offering free meals is a good idea? Use specific reasons and examples to support your opinion.",
+            "scoringBand": { "min": 0, "max": 5 },
+            "rubricCriteria": [
+              "thesis_and_support",
+              "grammar",
+              "vocabulary",
+              "organization"
+            ],
+            "wordTarget": {
+              "min": 250,
+              "max": 350,
+              "hint": "TOEIC Part 3 target: ~300 words"
+            }
+          }
+        ]
+      }
+    </script>
 
-  </div>
-
-  <script>
-    const SYSTEM_PROMPT = `You are an expert ETS TOEIC Writing examiner. Evaluate the user's submitted response strictly according to official TOEIC criteria:
+    <script>
+      const SYSTEM_PROMPT = `You are an expert ETS TOEIC Writing examiner. Evaluate the user's submitted response strictly according to official TOEIC criteria:
 - Part 1 (Questions 1 to 5): Sentence based on a picture and 2 target words (Score 0-3).
 - Part 2 (Questions 6 to 7): Email response addressing all requirements (Score 0-4).
 - Part 3 (Question 8): Opinion essay (~300 words) with clear thesis and coherence (Score 0-5).
@@ -85,111 +292,348 @@ Format your output clearly in Markdown:
 3. **Polished Revision:** Provide a native-level rewrite of their response.
 4. **Key Recommendations:** Give 2 actionable ways to improve.`;
 
-    const QUESTIONS = [
-      "Part 1: Write ONE sentence based on a office scene using the two words: 'schedule' and 'reschedule'.",
-      "Part 2: You received an email asking about delays in the Q3 marketing project. Write an email response providing 2 reasons for the delay and proposing a new deadline.",
-      "Part 3: Do you agree or disagree with the following statement? 'Working from home is more productive than working in a traditional office.' Give specific reasons and examples to support your opinion."
-    ];
+      let QUESTIONS = [];
+      let selectedQuestion = null;
 
-    window.onload = () => {
-      loadQuestion();
-      try {
-        const savedKey = localStorage.getItem('gemini_api_key');
-        if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
-      } catch (e) {
-        console.warn('localStorage not available:', e.message);
+      window.onload = () => {
+        initQuestionSelector();
+        try {
+          const savedKey = localStorage.getItem("gemini_api_key");
+          if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+        } catch (e) {
+          console.warn("localStorage not available:", e.message);
+        }
+      };
+
+      // ADR-004 Phase 1: parse embedded JSON synchronously (no fetch).
+      function loadQuestions() {
+        try {
+          const raw = document.getElementById("questionBank").textContent;
+          const data = JSON.parse(raw);
+          const questions = Array.isArray(data.questions) ? data.questions : [];
+          questions.forEach(validateQuestion);
+          return questions;
+        } catch (e) {
+          console.warn("Failed to parse embedded question bank:", e.message);
+          return [];
+        }
       }
-    };
 
-    function saveKey() {
-      const key = document.getElementById('apiKeyInput').value.trim();
-      try {
-        localStorage.setItem('gemini_api_key', key);
-        updateKeyStatus('✓ Key saved', 'text-green-600');
-      } catch (e) {
-        updateKeyStatus('✗ Save failed (localStorage blocked)', 'text-red-600');
+      // Mirrors docs/question-schema.md validateQuestion(); warns (does not throw) on bad entries.
+      function validateQuestion(q) {
+        const maxByPart = { 1: 3, 2: 4, 3: 5 };
+        const ok =
+          [1, 2, 3].includes(q.part) &&
+          typeof q.id === "string" &&
+          q.id.startsWith("p" + q.part + "-") &&
+          q.scoringBand &&
+          q.scoringBand.min === 0 &&
+          q.scoringBand.max === maxByPart[q.part] &&
+          Array.isArray(q.rubricCriteria) &&
+          q.rubricCriteria.length > 0 &&
+          (q.part !== 1 ||
+            (Array.isArray(q.targetWords) && q.targetWords.length === 2)) &&
+          (q.part !== 2 ||
+            (q.emailContext && typeof q.emailContext.body === "string")) &&
+          (q.part !== 3 ||
+            (typeof q.essayTopic === "string" && q.essayTopic.length > 10)) &&
+          (q.part !== 2 ||
+            !q.directives ||
+            (Array.isArray(q.directives) &&
+              q.directives.every(
+                (d) => typeof d === "string" && d.trim().length > 0,
+              ))) &&
+          (q.part !== 3 ||
+            !q.title ||
+            (typeof q.title === "string" && q.title.trim().length > 0));
+        if (!ok) console.warn("Question failed validation:", q && q.id);
+        return ok;
       }
-    }
 
-    function clearKey() {
-      try {
-        localStorage.removeItem('gemini_api_key');
-      } catch (e) {
-        console.warn('localStorage not available:', e.message);
+      const PART_LABELS = {
+        1: "Part 1: Write a sentence based on a picture",
+        2: "Part 2: Respond to a written request",
+        3: "Part 3: Opinion essay",
+      };
+
+      function shortLabel(q) {
+        if (q.part === 1) return "Words: " + q.targetWords.join(", ");
+        if (q.part === 2) return "Subject: " + q.emailContext.subject;
+        return (
+          "Topic: " +
+          (q.title ||
+            q.essayTopic.slice(0, 48) + (q.essayTopic.length > 48 ? "…" : ""))
+        );
       }
-      document.getElementById('apiKeyInput').value = '';
-      updateKeyStatus('✓ Key cleared', 'text-green-600');
-    }
 
-    function updateKeyStatus(message, colorClass) {
-      const el = document.getElementById('keyStatus');
-      el.textContent = message;
-      el.className = `text-xs min-w-[120px] h-5 flex items-center ${colorClass}`;
-      setTimeout(() => { el.textContent = ''; el.className = 'text-xs text-gray-500 min-w-[120px] h-5'; }, 3000);
-    }
-
-    function loadQuestion() {
-      const idx = document.getElementById('questionSelect').value;
-      document.getElementById('questionPromptText').innerText = QUESTIONS[idx];
-    }
-
-    function updateWordCount() {
-      const text = document.getElementById('userInput').value.trim();
-      const count = text ? text.split(/\s+/).length : 0;
-      document.getElementById('wordCount').innerText = `${count} words`;
-    }
-
-    async function evaluateAnswer() {
-      const apiKey = (() => {
-        try { return localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim(); }
-        catch (e) { return document.getElementById('apiKeyInput').value.trim(); }
-      })();
-      const answer = document.getElementById('userInput').value.trim();
-      const question = document.getElementById('questionPromptText').innerText;
-
-      if (!apiKey) return alert('Please enter and save your Gemini API Key first.');
-      if (!answer) return alert('Please write an answer before submitting.');
-
-      const submitBtn = document.getElementById('submitBtn');
-      const outputContainer = document.getElementById('outputContainer');
-      const analysisResult = document.getElementById('analysisResult');
-
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Analyzing response...';
-      outputContainer.classList.remove('hidden');
-      analysisResult.innerHTML = '<p class="text-gray-500 italic">Evaluating your submission against TOEIC rubrics...</p>';
-
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [{ parts: [{ text: `Question Prompt:\n${question}\n\nStudent Answer:\n${answer}` }] }]
-          })
+      function initQuestionSelector() {
+        QUESTIONS = loadQuestions();
+        const sel = document.getElementById("questionSelect");
+        sel.replaceChildren();
+        [1, 2, 3].forEach((part) => {
+          const group = QUESTIONS.map((q, i) => ({ q, i })).filter(
+            (x) => x.q.part === part,
+          );
+          if (!group.length) return;
+          const og = document.createElement("optgroup");
+          og.label = PART_LABELS[part];
+          group.forEach(({ q, i }) => {
+            const opt = document.createElement("option");
+            opt.value = String(i);
+            opt.textContent = q.id + " — " + shortLabel(q);
+            og.appendChild(opt);
+          });
+          sel.appendChild(og);
         });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
-
-        const candidate = data.candidates?.[0];
-        if (!candidate?.content?.parts?.[0]?.text) {
-          throw new Error("No response generated. The content may have been filtered.");
-        }
-        const feedbackMarkdown = candidate.content.parts[0].text;
-        analysisResult.innerHTML = DOMPurify.sanitize(marked.parse(feedbackMarkdown));
-      } catch (err) {
-        analysisResult.innerHTML = `<p class="text-red-600">Error generating evaluation: ${err.message}</p>`;
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Submit for Evaluation';
+        loadQuestion();
       }
-    }
-  </script>
-</body>
 
+      function loadQuestion() {
+        const idx = parseInt(
+          document.getElementById("questionSelect").value,
+          10,
+        );
+        const q = QUESTIONS[idx];
+        selectedQuestion = q;
+        const el = document.getElementById("questionPromptText");
+        el.replaceChildren();
+        if (!q) return;
+
+        const add = (text, cls) => {
+          const d = document.createElement("div");
+          if (cls) d.className = cls;
+          d.textContent = text;
+          el.appendChild(d);
+        };
+
+        if (q.part === 1) {
+          add(q.prompt);
+          add(
+            "Target words: " + q.targetWords.join(", "),
+            "mt-2 text-sm text-blue-800",
+          );
+          if (q.imageAlt)
+            add("Image: " + q.imageAlt, "mt-1 text-xs text-blue-700 italic");
+        } else if (q.part === 2) {
+          const e = q.emailContext;
+          add(q.prompt);
+          const box = document.createElement("div");
+          box.className = "mt-2 text-sm text-blue-800 space-y-1";
+          [
+            ["From", e.from],
+            ["To", e.to],
+            ["Subject", e.subject],
+            ["Sent", e.sent],
+          ].forEach(([k, v]) => {
+            const d = document.createElement("div");
+            const b = document.createElement("strong");
+            b.textContent = k + ": ";
+            d.appendChild(b);
+            d.appendChild(document.createTextNode(v));
+            box.appendChild(d);
+          });
+          const body = document.createElement("div");
+          body.className =
+            "mt-1 border-t border-blue-200 pt-1 whitespace-pre-line";
+          body.textContent = e.body;
+          box.appendChild(body);
+          el.appendChild(box);
+          if (q.directives && q.directives.length) {
+            const dirWrap = document.createElement("div");
+            dirWrap.className = "mt-3 text-sm text-blue-800";
+            const dirHead = document.createElement("div");
+            dirHead.className = "font-semibold text-blue-900";
+            dirHead.textContent = "Your response should include:";
+            dirWrap.appendChild(dirHead);
+            const ul = document.createElement("ul");
+            ul.className = "list-disc list-inside mt-1 space-y-0.5";
+            q.directives.forEach((d) => {
+              const li = document.createElement("li");
+              li.textContent = d;
+              ul.appendChild(li);
+            });
+            dirWrap.appendChild(ul);
+            el.appendChild(dirWrap);
+          }
+        } else {
+          add(q.prompt);
+          if (q.title) add(q.title, "mt-2 text-sm font-semibold text-blue-900");
+          add(q.essayTopic, "mt-2 text-sm text-blue-800");
+        }
+
+        const hint = document.getElementById("wordTargetHint");
+        if (hint)
+          hint.textContent =
+            q.wordTarget && q.wordTarget.hint ? q.wordTarget.hint : "";
+      }
+
+      // Plain-text rendering of the selected question for the evaluator prompt.
+      function buildQuestionText(q) {
+        if (q.part === 1) {
+          return (
+            q.prompt +
+            "\nTarget words: " +
+            q.targetWords.join(", ") +
+            (q.imageAlt ? "\nImage: " + q.imageAlt : "")
+          );
+        }
+        if (q.part === 2) {
+          const e = q.emailContext;
+          let text =
+            q.prompt +
+            "\nFrom: " +
+            e.from +
+            "\nTo: " +
+            e.to +
+            "\nSubject: " +
+            e.subject +
+            "\nSent: " +
+            e.sent +
+            "\n\n" +
+            e.body;
+          if (q.directives && q.directives.length) {
+            text +=
+              "\n\nYour response should include:\n- " +
+              q.directives.join("\n- ");
+          }
+          return text;
+        }
+        return (
+          q.prompt +
+          (q.title ? "\nTopic: " + q.title : "") +
+          "\n" +
+          q.essayTopic
+        );
+      }
+
+      function saveKey() {
+        const key = document.getElementById("apiKeyInput").value.trim();
+        try {
+          localStorage.setItem("gemini_api_key", key);
+          updateKeyStatus("✓ Key saved", "text-green-600");
+        } catch (e) {
+          updateKeyStatus(
+            "✗ Save failed (localStorage blocked)",
+            "text-red-600",
+          );
+        }
+      }
+
+      function clearKey() {
+        try {
+          localStorage.removeItem("gemini_api_key");
+        } catch (e) {
+          console.warn("localStorage not available:", e.message);
+        }
+        document.getElementById("apiKeyInput").value = "";
+        updateKeyStatus("✓ Key cleared", "text-green-600");
+      }
+
+      function updateKeyStatus(message, colorClass) {
+        const el = document.getElementById("keyStatus");
+        el.textContent = message;
+        el.className = `text-xs min-w-[120px] h-5 flex items-center ${colorClass}`;
+        setTimeout(() => {
+          el.textContent = "";
+          el.className = "text-xs text-gray-500 min-w-[120px] h-5";
+        }, 3000);
+      }
+
+      function updateWordCount() {
+        const text = document.getElementById("userInput").value.trim();
+        const count = text ? text.split(/\s+/).length : 0;
+        document.getElementById("wordCount").innerText = `${count} words`;
+      }
+
+      async function evaluateAnswer() {
+        const apiKey = (() => {
+          try {
+            return (
+              localStorage.getItem("gemini_api_key") ||
+              document.getElementById("apiKeyInput").value.trim()
+            );
+          } catch (e) {
+            return document.getElementById("apiKeyInput").value.trim();
+          }
+        })();
+        const answer = document.getElementById("userInput").value.trim();
+        const q = selectedQuestion;
+
+        if (!apiKey)
+          return alert("Please enter and save your Gemini API Key first.");
+        if (!answer) return alert("Please write an answer before submitting.");
+        if (!q) return alert("Please select a question first.");
+
+        const partContext =
+          `This is a TOEIC Writing Part ${q.part} task (score range 0-${q.scoringBand.max}). ` +
+          `Evaluate specifically against these criteria: ${q.rubricCriteria.join(", ")}.`;
+        const questionText = buildQuestionText(q);
+
+        const submitBtn = document.getElementById("submitBtn");
+        const outputContainer = document.getElementById("outputContainer");
+        const analysisResult = document.getElementById("analysisResult");
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Analyzing response...";
+        outputContainer.classList.remove("hidden");
+        analysisResult.textContent =
+          "Evaluating your submission against TOEIC rubrics...";
+
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `${partContext}\n\nQuestion Prompt:\n${questionText}\n\nStudent Answer:\n${answer}`,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            },
+          );
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.error?.message ||
+                `HTTP ${response.status}: ${response.statusText}`,
+            );
+          }
+          const data = await response.json();
+          if (data.error) throw new Error(data.error.message);
+
+          const candidate = data.candidates?.[0];
+          if (!candidate?.content?.parts?.[0]?.text) {
+            throw new Error(
+              "No response generated. The content may have been filtered.",
+            );
+          }
+          const feedbackMarkdown = candidate.content.parts[0].text;
+          analysisResult.replaceChildren(
+            DOMPurify.sanitize(marked.parse(feedbackMarkdown), {
+              RETURN_DOM_FRAGMENT: true,
+            }),
+          );
+        } catch (err) {
+          analysisResult.replaceChildren(
+            Object.assign(document.createElement("p"), {
+              className: "text-red-600",
+              textContent: "Error generating evaluation: " + err.message,
+            }),
+          );
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit for Evaluation";
+        }
+      }
+    </script>
+  </body>
 </html>

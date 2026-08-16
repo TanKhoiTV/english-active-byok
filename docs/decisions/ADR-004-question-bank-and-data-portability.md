@@ -94,6 +94,8 @@ The canonical question schema is documented in `docs/question-schema.md`. Each q
 - Part 2 (0–4): `sentence_quality_variety`, `vocabulary`, `organization`
 - Part 3 (0–5): `thesis_and_support`, `grammar`, `vocabulary`, `organization`
 
+In addition, Part 2 questions carry an optional `directives` array describing what the response must contain (typically two reasons plus one question, per the ETS Part 2 format), and Part 3 questions carry an optional `title` for display (mirroring an email subject). Both are additive, optional fields; see `docs/question-schema.md` and `docs/toeic-format-reference.md`.
+
 ## Alternatives Considered
 
 ### External API-backed question bank

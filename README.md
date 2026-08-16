@@ -1,26 +1,25 @@
 # English Active BYOK
 
-A browser-based TOEIC Writing practice tool. Write responses to Part 1 (sentence from picture), Part 2 (email reply), and Part 3 (opinion essay), then get AI-powered feedback on grammar, vocabulary, organization, and other ETS rubric criteria.
+A free, browser-based TOEIC Writing practice tool. Practice Part 1 (write a sentence from a picture), Part 2 (reply to an email), and Part 3 (opinion essay), then get instant AI feedback on grammar, vocabulary, organization, and the other ETS rubric criteria.
 
 ## How it works
 
-Users bring their own Google Gemini API key — paste it directly into the browser, and it never leaves your machine. No backend, no accounts, no telemetry. Everything runs as a single static page deployed to GitHub Pages.
+1. **Bring your own Gemini API key.** Paste it directly into the app in your browser.
+2. **Your key stays on your device.** There is no server, no account, and no tracking — everything runs locally in a single web page.
+3. **Get feedback.** Write your response and receive structured, ETS-style feedback.
 
-## Project structure
+## Using the app
 
-```text
-english-active-byok/
-├── index.html                # Static app shell (HTML + inline scripts)
-├── docs/                     # All architecture documentation
-│   ├── decisions/            # Architecture Decision Records (ADRs)
-│   ├── technical-notes/      # Implementation companions for each ADR
-│   ├── *.md                  # Reference guides (models, schema, sources)
-│   └── questions-sample.json # Internal calibration (gitignored)
-└── .gitignore
-```
+Open `index.html` in any modern browser, pick a question, write your answer, and submit it for evaluation.
 
-See [`docs/README.md`](docs/README.md) for documentation navigation.
+## What's included
 
-## Status
+- **9 practice questions** — 3 for each Part.
+  - **Part 1:** write one sentence using two given words.
+  - **Part 2:** read an email and write a reply that meets the stated requirements.
+  - **Part 3:** write a short opinion essay on a workplace topic.
+- More features (such as choosing the AI model) are planned for a future update.
 
-The current `index.html` is a working prototype with 3 practice questions. The full question bank, model selection dropdown, and multi-file component architecture are documented in `docs/decisions/` but not yet implemented.
+## Background & references
+
+The `docs/` folder contains optional background reading and reference material about the TOEIC format and how the feedback is generated. You don't need it to use the app.

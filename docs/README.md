@@ -28,6 +28,7 @@ Architecture and reference documentation for the English Active BYOK TOEIC Writi
 ### Reference Guides
 
 - [Question schema](question-schema.md) — TypeScript discriminated union schema with per-Part rubric criteria
+- [TOEIC format reference](toeic-format-reference.md) — per-Part task structure, scoring bands, response requirements
 - [Model provider guide](model-provider-guide.md) — Gemini stable model list, temperature support, deprecation schedule
 - [Reference library](reference-library.md) — ETS sources and calibration references
 
@@ -37,6 +38,6 @@ Architecture and reference documentation for the English Active BYOK TOEIC Writi
 docs/
 ├── decisions/          # Architecture Decision Records (what was decided)
 ├── technical-notes/    # Implementation companions (how each ADR is implemented)
-├── *.md                # Domain references (schemas, vendor guides, sources)
+├── *.md                # Domain references (schemas, vendor guides, sources, format)
 └── questions-sample.json  # Internal calibration (gitignored — not deployed)
 ```

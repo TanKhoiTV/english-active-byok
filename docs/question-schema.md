@@ -28,6 +28,7 @@ interface QuestionPart2 {
   part: 2;
   id: string;            // unique within Part 2, e.g. "p2-001"
   prompt: string;
+  directives?: string[];  // what the response must include (typically two reasons + one question)
   emailContext: {        // the email the student responds to
     from: string;
     to: string;
@@ -44,6 +45,7 @@ interface QuestionPart3 {
   part: 3;
   id: string;            // unique within Part 3, e.g. "p3-001"
   prompt: string;
+  title?: string;         // short display title (like an email subject)
   essayTopic?: string;    // optional — some questions may use prompt only
   scoringBand: { min: 0; max: 5 };
   rubricCriteria: RubricCriteriaPart3[];
@@ -123,6 +125,11 @@ These ranges are fixed by ETS and must not be changed.
     "sent": "August 15, 9:15 A.M.",
     "body": "Welcome to TechFlow Solutions! Your orientation starts Monday at 9:00 A.M. in Conference Room B. Please bring a photo ID and your employment paperwork. We'll cover company policies, IT setup, and team introductions. Lunch will be provided. If you have any dietary restrictions, please let me know by Sunday evening."
   },
+  "directives": [
+    "Confirm which documents to bring",
+    "Give two reasons you are excited to join",
+    "Ask one question about the first day"
+  ],
   "scoringBand": { "min": 0, "max": 4 },
   "rubricCriteria": ["sentence_quality_variety", "vocabulary", "organization"]
 }
@@ -135,6 +142,7 @@ These ranges are fixed by ETS and must not be changed.
   "part": 3,
   "id": "p3-001",
   "prompt": "Write an opinion essay. In your essay, be sure to state your opinion, develop your ideas with reasons and examples, and organize your response effectively.",
+  "title": "Remote Work vs. Office",
   "essayTopic": "Some people prefer to work from home full-time, while others prefer working in a traditional office. Which approach do you prefer? Use specific reasons and examples to support your opinion.",
   "scoringBand": { "min": 0, "max": 5 },
   "rubricCriteria": ["thesis_and_support", "grammar", "vocabulary", "organization"],
@@ -175,6 +183,10 @@ function validateQuestion(q: Question): boolean {
   if (q.part === 1) assert(q.targetWords.length === 2);
   if (q.part === 2) assert(q.emailContext != null);
   if (q.part === 3) assert(q.essayTopic && q.essayTopic.length > 10);
+  if (q.part === 2 && q.directives)
+    assert(Array.isArray(q.directives) && q.directives.every((d) => typeof d === "string" && d.length > 0));
+  if (q.part === 3 && q.title)
+    assert(typeof q.title === "string" && q.title.length > 0);
   return true;
 }
 ```
