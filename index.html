@@ -335,7 +335,7 @@ Format your output clearly in Markdown:
         initQuestionSelector();
         try {
           const savedKey = localStorage.getItem("gemini_api_key");
-          if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+          if (savedKey) document.querySelector("#apiKeyInput").value = savedKey;
         } catch (e) {
           console.warn("localStorage not available:", e.message);
         }
@@ -344,7 +344,7 @@ Format your output clearly in Markdown:
       // ADR-004 Phase 1: parse embedded JSON synchronously (no fetch).
       function loadQuestions() {
         try {
-          const raw = document.getElementById("questionBank").textContent;
+          const raw = document.querySelector("#questionBank").textContent;
           const data = JSON.parse(raw);
           const questions = Array.isArray(data.questions) ? data.questions : [];
           questions.forEach(validateQuestion);
@@ -404,7 +404,7 @@ Format your output clearly in Markdown:
 
       function initQuestionSelector() {
         QUESTIONS = loadQuestions();
-        const sel = document.getElementById("questionSelect");
+        const sel = document.querySelector("#questionSelect");
         sel.replaceChildren();
         [1, 2, 3].forEach((part) => {
           const group = QUESTIONS.map((q, i) => ({ q, i })).filter(
@@ -417,16 +417,16 @@ Format your output clearly in Markdown:
             const opt = document.createElement("option");
             opt.value = String(i);
             opt.textContent = q.id + " — " + shortLabel(q);
-            og.appendChild(opt);
+            og.append(opt);
           });
-          sel.appendChild(og);
+          sel.append(og);
         });
         loadQuestion();
       }
 
       // Populate the model dropdown from MODELS; restore a valid saved choice or default.
       function initModelSelector() {
-        const sel = document.getElementById("modelSelect");
+        const sel = document.querySelector("#modelSelect");
         sel.replaceChildren();
         MODELS.forEach((m) => {
           const opt = document.createElement("option");
@@ -435,7 +435,7 @@ Format your output clearly in Markdown:
           opt.title = m.temp
             ? ""
             : "Temperature is not supported on this model";
-          sel.appendChild(opt);
+          sel.append(opt);
         });
         let saved = null;
         try {
@@ -449,7 +449,7 @@ Format your output clearly in Markdown:
 
       // Persist the chosen model and refresh the optional temperature hint.
       function onModelChange() {
-        const sel = document.getElementById("modelSelect");
+        const sel = document.querySelector("#modelSelect");
         try {
           localStorage.setItem("gemini_model", sel.value);
         } catch (e) {}
@@ -458,8 +458,8 @@ Format your output clearly in Markdown:
 
       // Show a hint only when the selected model does not support temperature.
       function updateModelHint() {
-        const sel = document.getElementById("modelSelect");
-        const hint = document.getElementById("modelHint");
+        const sel = document.querySelector("#modelSelect");
+        const hint = document.querySelector("#modelHint");
         if (!hint) return;
         const m = MODELS.find((x) => x.id === sel.value);
         const unsupported = !m || m.temp === false;
@@ -471,12 +471,12 @@ Format your output clearly in Markdown:
 
       function loadQuestion() {
         const idx = parseInt(
-          document.getElementById("questionSelect").value,
+          document.querySelector("#questionSelect").value,
           10,
         );
         const q = QUESTIONS[idx];
         selectedQuestion = q;
-        const el = document.getElementById("questionPromptText");
+        const el = document.querySelector("#questionPromptText");
         el.replaceChildren();
         if (!q) return;
 
@@ -484,7 +484,7 @@ Format your output clearly in Markdown:
           const d = document.createElement("div");
           if (cls) d.className = cls;
           d.textContent = text;
-          el.appendChild(d);
+          el.append(d);
         };
 
         if (q.part === 1) {
@@ -509,32 +509,32 @@ Format your output clearly in Markdown:
             const d = document.createElement("div");
             const b = document.createElement("strong");
             b.textContent = k + ": ";
-            d.appendChild(b);
-            d.appendChild(document.createTextNode(v));
-            box.appendChild(d);
+            d.append(b);
+            d.append(document.createTextNode(v));
+            box.append(d);
           });
           const body = document.createElement("div");
           body.className =
             "mt-1 border-t border-blue-200 pt-1 whitespace-pre-line";
           body.textContent = e.body;
-          box.appendChild(body);
-          el.appendChild(box);
+          box.append(body);
+          el.append(box);
           if (q.directives && q.directives.length) {
             const dirWrap = document.createElement("div");
             dirWrap.className = "mt-3 text-sm text-blue-800";
             const dirHead = document.createElement("div");
             dirHead.className = "font-semibold text-blue-900";
             dirHead.textContent = "Your response should include:";
-            dirWrap.appendChild(dirHead);
+            dirWrap.append(dirHead);
             const ul = document.createElement("ul");
             ul.className = "list-disc list-inside mt-1 space-y-0.5";
             q.directives.forEach((d) => {
               const li = document.createElement("li");
               li.textContent = d;
-              ul.appendChild(li);
+              ul.append(li);
             });
-            dirWrap.appendChild(ul);
-            el.appendChild(dirWrap);
+            dirWrap.append(ul);
+            el.append(dirWrap);
           }
         } else {
           add(q.prompt);
@@ -542,7 +542,7 @@ Format your output clearly in Markdown:
           add(q.essayTopic, "mt-2 text-sm text-blue-800");
         }
 
-        const hint = document.getElementById("wordTargetHint");
+        const hint = document.querySelector("#wordTargetHint");
         if (hint)
           hint.textContent =
             q.wordTarget && q.wordTarget.hint ? q.wordTarget.hint : "";
@@ -588,7 +588,7 @@ Format your output clearly in Markdown:
       }
 
       function saveKey() {
-        const key = document.getElementById("apiKeyInput").value.trim();
+        const key = document.querySelector("#apiKeyInput").value.trim();
         try {
           localStorage.setItem("gemini_api_key", key);
           updateKeyStatus("✓ Key saved", "text-green-600");
@@ -606,12 +606,12 @@ Format your output clearly in Markdown:
         } catch (e) {
           console.warn("localStorage not available:", e.message);
         }
-        document.getElementById("apiKeyInput").value = "";
+        document.querySelector("#apiKeyInput").value = "";
         updateKeyStatus("✓ Key cleared", "text-green-600");
       }
 
       function updateKeyStatus(message, colorClass) {
-        const el = document.getElementById("keyStatus");
+        const el = document.querySelector("#keyStatus");
         el.textContent = message;
         el.className = `text-xs min-w-[120px] h-5 flex items-center ${colorClass}`;
         setTimeout(() => {
@@ -621,9 +621,9 @@ Format your output clearly in Markdown:
       }
 
       function updateWordCount() {
-        const text = document.getElementById("userInput").value.trim();
+        const text = document.querySelector("#userInput").value.trim();
         const count = text ? text.split(/\s+/).length : 0;
-        document.getElementById("wordCount").innerText = `${count} words`;
+        document.querySelector("#wordCount").textContent = `${count} words`;
       }
 
       async function evaluateAnswer() {
@@ -631,16 +631,16 @@ Format your output clearly in Markdown:
           try {
             return (
               localStorage.getItem("gemini_api_key") ||
-              document.getElementById("apiKeyInput").value.trim()
+              document.querySelector("#apiKeyInput").value.trim()
             );
           } catch (e) {
-            return document.getElementById("apiKeyInput").value.trim();
+            return document.querySelector("#apiKeyInput").value.trim();
           }
         })();
-        const answer = document.getElementById("userInput").value.trim();
+        const answer = document.querySelector("#userInput").value.trim();
         const q = selectedQuestion;
         const modelId =
-          document.getElementById("modelSelect").value || DEFAULT_MODEL;
+          document.querySelector("#modelSelect").value || DEFAULT_MODEL;
         try {
           localStorage.setItem("gemini_model", modelId);
         } catch (e) {}
@@ -655,12 +655,12 @@ Format your output clearly in Markdown:
           `Evaluate specifically against these criteria: ${q.rubricCriteria.join(", ")}.`;
         const questionText = buildQuestionText(q);
 
-        const submitBtn = document.getElementById("submitBtn");
-        const outputContainer = document.getElementById("outputContainer");
-        const analysisResult = document.getElementById("analysisResult");
+        const submitBtn = document.querySelector("#submitBtn");
+        const outputContainer = document.querySelector("#outputContainer");
+        const analysisResult = document.querySelector("#analysisResult");
 
         submitBtn.disabled = true;
-        submitBtn.innerText = "Analyzing response...";
+        submitBtn.textContent = "Analyzing response...";
         outputContainer.classList.remove("hidden");
         analysisResult.textContent =
           "Evaluating your submission against TOEIC rubrics...";
@@ -717,7 +717,7 @@ Format your output clearly in Markdown:
           );
         } finally {
           submitBtn.disabled = false;
-          submitBtn.innerText = "Submit for Evaluation";
+          submitBtn.textContent = "Submit for Evaluation";
         }
       }
     </script>
