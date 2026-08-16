@@ -25,7 +25,7 @@ conflict, docs win as design and `index.html` is brought into conformance.
 | ADR-002 T1#1: structured output (`responseSchema`) + per-criterion decomposition | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T1#4: `PROMPT_VERSION` + provenance + "AI estimate" disclaimer | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T2: few-shot calibration anchors | **Implemented** (P1) — opt-in, loaded from gitignored `docs/questions-sample.json` via a local file picker (never fetched/embedded) |
-| ADR-001 / ADR-004: export/import settings + `answerHistory` | Not started — blocks ADR-006 *import-time* trigger (P2) |
+| ADR-001 / ADR-004: export/import settings + `answerHistory` | **Implemented** (P2 #2/#3) — client-side export/import via Blob + `FileReader`; `answerHistory` persists under `gemini_eval_history`. Unblocks ADR-006 *import-time* dead-model check |
 
 **Working before P0:** per-Part content-coverage signals (`targetWords`,
 `directives`, `title`/`essayTopic`) via `buildQuestionText()`; deterministic
@@ -140,12 +140,18 @@ Run before every release:
 1. **Question-bank growth (ADR-004).** Add original questions (copy-edit + human
    review gate) toward the ~30-question / 50 KB trigger for Phase 2
    (`questions.json` + `fetch`/cache). Export/import stays additive.
-2. **Persistent cross-reload history** (localStorage). Currently deferred but high
-   user value; natural once structured output exists (store prior evaluations with
-   provenance).
-3. **Export/import settings + history (ADR-001/ADR-004).** Also unblocks ADR-006's
-   *import-time* dead-model check (`App.exportImport.deserialize()` referencing
-   `STABLE_MODELS`).
+2. **Persistent cross-reload history** (localStorage) — **DONE.** Each successful
+   evaluation is saved (prompt, answer, structured feedback, model, calibration flag,
+   prompt version) under `gemini_eval_history` and survives a reload; a collapsible
+   "History & Backup" panel lists records newest-first and expands to show the full
+   evaluation (reusing `renderEvaluation`). Capped at `HISTORY_LIMIT = 50`.
+3. **Export/import settings + history (ADR-001/ADR-004)** — **DONE.** "Download
+   backup" exports `{ backupVersion, exportedAt, promptVersion, settings, history }`
+   as a JSON Blob (API key included only on opt-in). "Restore backup" reads it via
+   `FileReader`, merges history by `id`, restores the model, and runs ADR-006's
+   *import-time* dead-model check: any model not in `MODELS` is flagged and the user
+   is offered a switch to `DEFAULT_MODEL` (`gemini-3.6-flash`); affected history rows
+   are marked "⚠ deprecated model". No `fetch`; everything stays client-side.
 
 ### P3 — Structural (only on trigger)
 

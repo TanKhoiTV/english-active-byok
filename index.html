@@ -159,6 +159,59 @@
         >
           Submit for Evaluation
         </button>
+
+        <!-- P2 #2/#3: persistent history + export/import (client-only, ADR-001).
+             History is stored in localStorage and never uploaded. Backup export/import
+             uses Blob + FileReader (no fetch); the API key is included only on opt-in. -->
+        <div class="border-t border-gray-200 pt-3 mt-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold text-gray-700 uppercase tracking-wide">
+              History &amp; Backup
+            </h3>
+            <button
+              id="clearHistoryBtn"
+              type="button"
+              onclick="clearHistory()"
+              class="hidden text-[11px] text-red-600 hover:underline"
+            >
+              Clear history
+            </button>
+          </div>
+          <div id="historyList" class="space-y-1"></div>
+          <p id="historyEmpty" class="text-[11px] text-gray-400">
+            No saved evaluations yet.
+          </p>
+          <div
+            class="flex flex-wrap items-center gap-3 mt-3 text-xs text-gray-600 border-t border-gray-200 pt-3"
+          >
+            <button
+              id="exportBtn"
+              type="button"
+              onclick="exportBackup()"
+              class="border border-gray-300 text-gray-600 px-3 py-1 rounded transition hover:bg-gray-50"
+            >
+              Download backup
+            </button>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" id="exportIncludeKey" />
+              Include API key
+            </label>
+            <label class="cursor-pointer">
+              <span
+                class="border border-gray-300 text-gray-600 text-xs px-3 py-1 rounded transition hover:bg-gray-50"
+                >Restore backup…</span
+              >
+              <input
+                type="file"
+                id="backupFile"
+                accept=".json,application/json"
+                class="hidden"
+                onchange="importBackup(event)"
+              />
+            </label>
+            <span id="backupStatus" class="text-[11px] text-gray-400"></span>
+          </div>
+        </div>
       </div>
 
       <!-- Analysis Output -->
@@ -564,6 +617,7 @@ Output a JSON object with these fields:
         }
         sel.value = MODELS.some((m) => m.id === saved) ? saved : DEFAULT_MODEL;
         updateModelHint();
+        renderHistoryList();
       }
 
       // Persist the chosen model and refresh the optional temperature hint.
@@ -965,8 +1019,8 @@ Output a JSON object with these fields:
         root.append(d);
       }
 
-      function renderEvaluation(fb, maxScore) {
-        const root = document.querySelector("#analysisResult");
+      function renderEvaluation(fb, maxScore, rootEl) {
+        const root = rootEl || document.querySelector("#analysisResult");
         root.replaceChildren();
         const max = typeof maxScore === "number" ? maxScore : null;
         const suffix = max != null ? "/" + max : "";
@@ -1032,7 +1086,7 @@ Output a JSON object with these fields:
         }
 
         const prov = document.querySelector("#provenance");
-        if (prov) {
+        if (prov && !rootEl) {
           const when = fb.timestamp
             ? new Date(fb.timestamp).toLocaleString()
             : "";
@@ -1043,6 +1097,317 @@ Output a JSON object with these fields:
             (fb.prompt_version || "?") +
             (when ? " · " + when : "");
         }
+      }
+
+      // --- P2 #2/#3: persistent history + export/import (client-only, ADR-001) ---
+      // History is stored in localStorage and never uploaded. Backup uses Blob +
+      // FileReader (no fetch); the API key is included only on explicit opt-in.
+      const HISTORY_KEY = "gemini_eval_history";
+      const HISTORY_LIMIT = 50;
+      const BACKUP_VERSION = 1;
+
+      function loadHistory() {
+        try {
+          const raw = localStorage.getItem(HISTORY_KEY);
+          if (!raw) return [];
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+          console.error("loadHistory failed:", e.message);
+          return [];
+        }
+      }
+
+      function saveHistory(arr) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
+          return true;
+        } catch (e) {
+          console.error("saveHistory failed (quota?):", e.message);
+          return false;
+        }
+      }
+
+      // Persist one evaluation record (never throws into the scoring path).
+      function recordEvaluation(fb, q, answer, calibrationOn, modelId) {
+        try {
+          const record = {
+            id:
+              (fb.timestamp || new Date().toISOString()) +
+              "-" +
+              Math.random().toString(36).slice(2, 8),
+            ts: fb.timestamp || new Date().toISOString(),
+            model: modelId || fb.model_used || "",
+            part: q ? q.part : null,
+            questionId: q ? q.id : null,
+            prompt: (() => {
+              try {
+                return q ? buildQuestionText(q) : "";
+              } catch (e) {
+                return "";
+              }
+            })(),
+            answer: answer || "",
+            maxScore: q && q.scoringBand ? q.scoringBand.max : null,
+            calibration: !!calibrationOn,
+            promptVersion: fb.prompt_version || PROMPT_VERSION,
+            result: fb,
+          };
+          const hist = loadHistory();
+          hist.unshift(record);
+          while (hist.length > HISTORY_LIMIT) hist.pop();
+          saveHistory(hist);
+          renderHistoryList();
+        } catch (e) {
+          console.error("recordEvaluation failed:", e.message);
+        }
+      }
+
+      // Render the collapsible history list; each row expands to show the full
+      // evaluation via the existing renderEvaluation() (reused with a scoped root).
+      function renderHistoryList() {
+        const list = document.querySelector("#historyList");
+        const empty = document.querySelector("#historyEmpty");
+        const clearBtn = document.querySelector("#clearHistoryBtn");
+        if (!list) return;
+        const hist = loadHistory();
+        list.replaceChildren();
+        if (!hist.length) {
+          if (empty) empty.classList.remove("hidden");
+          if (clearBtn) clearBtn.classList.add("hidden");
+          return;
+        }
+        if (empty) empty.classList.add("hidden");
+        if (clearBtn) clearBtn.classList.remove("hidden");
+        hist.forEach((rec) => {
+          const wrap = document.createElement("div");
+          wrap.className = "border border-gray-200 rounded overflow-hidden";
+          const head = document.createElement("button");
+          head.type = "button";
+          head.className =
+            "w-full text-left px-2 py-1 hover:bg-gray-50 flex justify-between gap-2 items-center";
+          const left = document.createElement("span");
+          left.className = "text-gray-700";
+          left.textContent =
+            (rec.ts ? new Date(rec.ts).toLocaleString() : "?") +
+            " · Part " +
+            (rec.part ?? "?") +
+            " · Q" +
+            (rec.questionId ?? "?");
+          const right = document.createElement("span");
+          right.className = "text-blue-700 font-semibold whitespace-nowrap";
+          const score =
+            rec.result && rec.result.final_score != null
+              ? rec.result.final_score
+              : "?";
+          const max = rec.maxScore != null ? rec.maxScore : "";
+          right.textContent = score + (max !== "" ? "/" + max : "");
+          if (rec.deadModel) {
+            const warn = document.createElement("span");
+            warn.className = "text-amber-600 text-[10px] ml-1";
+            warn.textContent = "⚠ deprecated model";
+            right.append(warn);
+          }
+          head.append(left, right);
+
+          const detail = document.createElement("div");
+          detail.className =
+            "hidden px-2 py-2 border-t border-gray-100 text-gray-700 space-y-2";
+          const pPrompt = document.createElement("div");
+          const pLabel = document.createElement("div");
+          pLabel.className = "text-[11px] font-bold text-gray-500 uppercase";
+          pLabel.textContent = "Prompt";
+          const pText = document.createElement("div");
+          pText.className = "text-xs whitespace-pre-wrap";
+          pText.textContent = rec.prompt || "";
+          pPrompt.append(pLabel, pText);
+          const pAns = document.createElement("div");
+          const aLabel = document.createElement("div");
+          aLabel.className = "text-[11px] font-bold text-gray-500 uppercase";
+          aLabel.textContent = "Your answer";
+          const aText = document.createElement("div");
+          aText.className = "text-xs whitespace-pre-wrap";
+          aText.textContent = rec.answer || "";
+          pAns.append(aLabel, aText);
+          const evalBox = document.createElement("div");
+          evalBox.className = "prose prose-sm max-w-none";
+          try {
+            renderEvaluation(rec.result, rec.maxScore, evalBox);
+          } catch (e) {
+            evalBox.textContent = "(Could not render this evaluation.)";
+          }
+          detail.append(pPrompt, pAns, evalBox);
+          head.onclick = () => detail.classList.toggle("hidden");
+          wrap.append(head, detail);
+          list.append(wrap);
+        });
+      }
+
+      function clearHistory() {
+        if (!confirm("Clear all saved evaluations? This cannot be undone."))
+          return;
+        try {
+          localStorage.removeItem(HISTORY_KEY);
+        } catch (e) {}
+        renderHistoryList();
+      }
+
+      function updateBackupStatus(message, colorClass) {
+        const el = document.querySelector("#backupStatus");
+        if (!el) return;
+        el.textContent = message;
+        el.className = "text-[11px] " + (colorClass || "text-gray-400");
+      }
+
+      // P2 #3: export settings + history to a JSON file (Blob download; no fetch).
+      function exportBackup() {
+        try {
+          const includeKey = !!(
+            document.querySelector("#exportIncludeKey") &&
+            document.querySelector("#exportIncludeKey").checked
+          );
+          const settings = {
+            model: (() => {
+              try {
+                return localStorage.getItem("gemini_model") || DEFAULT_MODEL;
+              } catch (e) {
+                return DEFAULT_MODEL;
+              }
+            })(),
+          };
+          if (includeKey) {
+            try {
+              const k = localStorage.getItem("gemini_api_key");
+              if (k) settings.apiKey = k;
+            } catch (e) {}
+          }
+          const backup = {
+            backupVersion: BACKUP_VERSION,
+            exportedAt: new Date().toISOString(),
+            promptVersion: PROMPT_VERSION,
+            settings,
+            history: loadHistory(),
+          };
+          const blob = new Blob([JSON.stringify(backup, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+          a.href = url;
+          a.download = "english-active-backup-" + stamp + ".json";
+          document.body.append(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          updateBackupStatus("Backup downloaded.", "text-green-600");
+        } catch (e) {
+          updateBackupStatus("Export failed: " + e.message, "text-red-600");
+        }
+      }
+
+      // P2 #3 + ADR-006: import a backup (FileReader), restore settings + history,
+      // and run the import-time dead-model check against the current MODELS list.
+      function importBackup(event) {
+        const input = event.target;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onerror = () =>
+          updateBackupStatus("Could not read the file.", "text-red-600");
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (
+              !data ||
+              typeof data !== "object" ||
+              !Array.isArray(data.history) ||
+              typeof data.backupVersion !== "number"
+            )
+              throw new Error("Not a valid backup file.");
+            const knownIds = MODELS.map((m) => m.id);
+            const deadModels = new Set();
+
+            if (data.settings && typeof data.settings.model === "string") {
+              const m = data.settings.model;
+              if (!knownIds.includes(m)) deadModels.add(m);
+              try {
+                localStorage.setItem("gemini_model", m);
+              } catch (e) {}
+              const sel = document.querySelector("#modelSelect");
+              if (sel) sel.value = m;
+            }
+
+            const byId = new Map(loadHistory().map((r) => [r.id, r]));
+            (data.history || []).forEach((r) => {
+              if (r && r.id) {
+                byId.set(r.id, r);
+                if (r.model && !knownIds.includes(r.model))
+                  deadModels.add(r.model);
+              }
+            });
+            let merged = Array.from(byId.values());
+            merged.sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
+            while (merged.length > HISTORY_LIMIT) merged.pop();
+            saveHistory(merged);
+
+            if (data.settings && typeof data.settings.apiKey === "string") {
+              if (confirm("The backup includes an API key. Restore it?")) {
+                try {
+                  localStorage.setItem("gemini_api_key", data.settings.apiKey);
+                } catch (e) {}
+              }
+            }
+
+            renderHistoryList();
+
+            // ADR-006: flag/switch unknown or deprecated models from the import.
+            if (deadModels.size) {
+              const list = Array.from(deadModels).join(", ");
+              if (
+                confirm(
+                  "Backup references unknown/deprecated model(s): " +
+                    list +
+                    ". Switch to default (" +
+                    DEFAULT_MODEL +
+                    ")?",
+                )
+              ) {
+                try {
+                  localStorage.setItem("gemini_model", DEFAULT_MODEL);
+                } catch (e) {}
+                const sel = document.querySelector("#modelSelect");
+                if (sel) sel.value = DEFAULT_MODEL;
+                merged.forEach((r) => {
+                  if (r.model && !knownIds.includes(r.model))
+                    r.deadModel = true;
+                });
+                saveHistory(merged);
+                updateBackupStatus(
+                  "Restored. Switched deprecated model(s) to " +
+                    DEFAULT_MODEL +
+                    ".",
+                  "text-amber-600",
+                );
+              } else {
+                updateBackupStatus(
+                  "Restored, but deprecated model(s) left as-is: " + list + ".",
+                  "text-amber-600",
+                );
+              }
+            } else {
+              updateBackupStatus(
+                "Backup restored (" + merged.length + " records).",
+                "text-green-600",
+              );
+            }
+          } catch (e) {
+            updateBackupStatus("Import failed: " + e.message, "text-red-600");
+          } finally {
+            input.value = "";
+          }
+        };
+        reader.readAsText(file);
       }
 
       async function evaluateAnswer() {
@@ -1145,6 +1510,7 @@ Output a JSON object with these fields:
           feedback.model_used = modelId;
           feedback.prompt_version = PROMPT_VERSION;
           feedback.timestamp = new Date().toISOString();
+          recordEvaluation(feedback, q, answer, calibrationEnabled, modelId);
           renderEvaluation(feedback, q.scoringBand ? q.scoringBand.max : null);
         } catch (err) {
           handleApiError(err, lastResponse);
