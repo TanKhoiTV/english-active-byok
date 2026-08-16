@@ -35,7 +35,8 @@
             Practice TOEIC Writing with direct AI feedback
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-none">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <label for="modelSelect" class="sr-only text-xs text-gray-500"
             >Model</label
           >
@@ -63,8 +64,9 @@
           >
             Clear
           </button>
+          </div>
+          <div id="keyStatus" class="text-xs text-gray-500 h-5"></div>
         </div>
-        <div id="keyStatus" class="text-xs text-gray-500 h-5"></div>
       </div>
 
       <!-- Practice Section -->
