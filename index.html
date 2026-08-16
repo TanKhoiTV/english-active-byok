@@ -412,7 +412,7 @@ Output a JSON object with these fields:
           const savedKey = localStorage.getItem("gemini_api_key");
           if (savedKey) document.querySelector("#apiKeyInput").value = savedKey;
         } catch (e) {
-          console.warn("localStorage not available:", e.message);
+          console.error("localStorage not available:", e.message);
         }
       };
 
@@ -424,7 +424,9 @@ Output a JSON object with these fields:
         try {
           data = JSON.parse(raw);
         } catch (e) {
-          throw new Error("Embedded question bank is not valid JSON: " + e.message);
+          throw new Error(
+            "Embedded question bank is not valid JSON: " + e.message,
+          );
         }
         const questions = Array.isArray(data.questions) ? data.questions : [];
         const invalid = questions.filter((q) => !validateQuestion(q));
@@ -465,7 +467,6 @@ Output a JSON object with these fields:
           (q.part !== 3 ||
             !q.title ||
             (typeof q.title === "string" && q.title.trim().length > 0));
-        if (!ok) console.warn("Question failed validation:", q && q.id);
         return ok;
       }
 
@@ -695,7 +696,7 @@ Output a JSON object with these fields:
         try {
           localStorage.removeItem("gemini_api_key");
         } catch (e) {
-          console.warn("localStorage not available:", e.message);
+          console.error("localStorage not available:", e.message);
         }
         document.querySelector("#apiKeyInput").value = "";
         updateKeyStatus("✓ Key cleared", "text-green-600");
@@ -892,8 +893,13 @@ Output a JSON object with these fields:
         } catch (e) {}
 
         if (!apiKey)
-          return showValidationError("Please enter and save your Gemini API Key first.");
-        if (!answer) return showValidationError("Please write an answer before submitting.");
+          return showValidationError(
+            "Please enter and save your Gemini API Key first.",
+          );
+        if (!answer)
+          return showValidationError(
+            "Please write an answer before submitting.",
+          );
         if (!q) return showValidationError("Please select a question first.");
 
         const partContext =
