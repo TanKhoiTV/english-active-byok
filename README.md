@@ -18,7 +18,7 @@ Open `index.html` in any modern browser, pick a question, write your answer, and
   - **Part 1:** write one sentence using two given words.
   - **Part 2:** read an email and write a reply that meets the stated requirements.
   - **Part 3:** write a short opinion essay on a workplace topic.
-- More features (such as choosing the AI model) are planned for a future update.
+- **Pick your AI model** — choose which Gemini model evaluates your answer (defaults to Gemini 2.5 Flash).
 
 ## Background & references
 

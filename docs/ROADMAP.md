@@ -18,7 +18,7 @@ Single source of truth for **next objectives** — deferred or not-yet-implement
 
 ### Features
 
-- **Model selection dropdown** — explicitly "planned" in README; absent from `index.html`. `docs/model-provider-guide.md` is already structured for future providers.
+- **Model selection dropdown** — **done** (implemented in `index.html` via an inline `MODELS` mirror of `docs/model-provider-guide.md`; the `App.models`/`scripts/models.js` target is deferred with ADR-003). Defaults to Gemini 2.5 Flash; choice persisted in `localStorage`.
 - **Question-bank growth (ADR-004)** — Phase 2 (`questions.json` + `fetch`/cache) only if the bank exceeds ~30 questions / 50 KB. New questions: human-curated originals + copy-editing gate; export/import is additive; user-custom questions deferred to a future ADR.
 - **Persistent cross-reload history** — deferred in ADR-002 (v1 history held in memory only).
 - **Reliability Tier 2–3** — few-shot calibration anchors (Tier 2), self-consistency voting (Tier 3, deferred opt-in); optional optimizations, not built.
