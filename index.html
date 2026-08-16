@@ -37,35 +37,35 @@
         </div>
         <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-none">
           <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <label for="modelSelect" class="sr-only text-xs text-gray-500"
-            >Model</label
-          >
-          <select
-            id="modelSelect"
-            onchange="onModelChange()"
-            class="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
-          ></select>
-          <span id="modelHint" class="text-xs text-gray-400 hidden"></span>
-          <input
-            id="apiKeyInput"
-            type="password"
-            placeholder="Paste Gemini API Key"
-            class="border border-gray-300 rounded px-3 py-1 text-sm flex-1 sm:w-64"
-          />
-          <button
-            onclick="saveKey()"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded transition"
-          >
-            Save
-          </button>
-          <button
-            onclick="clearKey()"
-            class="border border-gray-300 text-gray-600 text-sm px-4 py-1 rounded transition"
-          >
-            Clear
-          </button>
+            <label for="modelSelect" class="sr-only text-xs text-gray-500"
+              >Model</label
+            >
+            <select
+              id="modelSelect"
+              onchange="onModelChange()"
+              class="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+            ></select>
+            <span id="modelHint" class="text-xs text-gray-400 hidden"></span>
+            <input
+              id="apiKeyInput"
+              type="password"
+              placeholder="Paste Gemini API Key"
+              class="border border-gray-300 rounded px-3 py-1 text-sm flex-1 sm:w-64"
+            />
+            <button
+              onclick="saveKey()"
+              class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded transition"
+            >
+              Save
+            </button>
+            <button
+              onclick="clearKey()"
+              class="border border-gray-300 text-gray-600 text-sm px-4 py-1 rounded transition"
+            >
+              Clear
+            </button>
           </div>
-          <div id="keyStatus" class="text-xs text-gray-500 h-5"></div>
+          <div id="keyStatus" class="text-xs text-gray-500 h-5 sm:text-right"></div>
         </div>
       </div>
 
