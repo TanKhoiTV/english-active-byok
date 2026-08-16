@@ -420,7 +420,12 @@ Output a JSON object with these fields:
       // ADR-006 init-time dev guard: throw on authoring mistakes (invalid/malformed bank).
       function loadQuestions() {
         const raw = document.querySelector("#questionBank").textContent;
-        const data = JSON.parse(raw);
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch (e) {
+          throw new Error("Embedded question bank is not valid JSON: " + e.message);
+        }
         const questions = Array.isArray(data.questions) ? data.questions : [];
         const invalid = questions.filter((q) => !validateQuestion(q));
         if (invalid.length) {
@@ -481,7 +486,14 @@ Output a JSON object with these fields:
       }
 
       function initQuestionSelector() {
-        QUESTIONS = loadQuestions();
+        try {
+          QUESTIONS = loadQuestions();
+        } catch (e) {
+          const outputContainer = document.querySelector("#outputContainer");
+          if (outputContainer) outputContainer.classList.remove("hidden");
+          showError("Fatal: " + e.message);
+          return;
+        }
         const sel = document.querySelector("#questionSelect");
         sel.replaceChildren();
         [1, 2, 3].forEach((part) => {
@@ -718,6 +730,13 @@ Output a JSON object with these fields:
         );
       }
 
+      // Show a pre-submit validation error in-page (replaces alert()).
+      function showValidationError(message) {
+        const outputContainer = document.querySelector("#outputContainer");
+        if (outputContainer) outputContainer.classList.remove("hidden");
+        showError(message);
+      }
+
       // Show the dead-model recovery banner and pre-select a stable model (ADR-006 / model-provider-guide).
       function showModelRecovery() {
         const banner = document.querySelector("#recoveryBanner");
@@ -873,9 +892,9 @@ Output a JSON object with these fields:
         } catch (e) {}
 
         if (!apiKey)
-          return alert("Please enter and save your Gemini API Key first.");
-        if (!answer) return alert("Please write an answer before submitting.");
-        if (!q) return alert("Please select a question first.");
+          return showValidationError("Please enter and save your Gemini API Key first.");
+        if (!answer) return showValidationError("Please write an answer before submitting.");
+        if (!q) return showValidationError("Please select a question first.");
 
         const partContext =
           `This is a TOEIC Writing Part ${q.part} task (score range 0-${q.scoringBand.max}). ` +
