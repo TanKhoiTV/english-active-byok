@@ -144,6 +144,9 @@ Run before every release:
    ADR-001. The `questions.json` + `fetch`/cache split stays deferred with
    ADR-003/ADR-005 until the ~30-question / 50 KB trigger. New prompts are
    assistant-authored and still need the human review gate before a release.
+   Copy-editing sweep applied 2026-08-16: fixed a p2-004 role mismatch in the
+   directives (response is from the customer's perspective) and tightened its body
+   wording; human review still pending.
 2. **Persistent cross-reload history** (localStorage) — **DONE.** Each successful
    evaluation is saved (prompt, answer, structured feedback, model, calibration flag,
    prompt version) under `gemini_eval_history` and survives a reload; a collapsible
