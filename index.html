@@ -65,14 +65,6 @@
           </button>
         </div>
         <div id="keyStatus" class="text-xs text-gray-500 h-5"></div>
-        <div
-          id="recoveryBanner"
-          hidden
-          class="w-full text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2"
-        >
-          The model in your exported settings is no longer available. Please
-          select a different model above.
-        </div>
       </div>
 
       <!-- Practice Section -->
@@ -536,7 +528,6 @@ Output a JSON object with these fields:
           localStorage.setItem("gemini_model", sel.value);
         } catch (e) {}
         updateModelHint();
-        hideModelRecovery();
       }
 
       // Show a hint only when the selected model does not support temperature.
@@ -729,42 +720,23 @@ Output a JSON object with these fields:
         showError(message);
       }
 
-      // Show the dead-model recovery banner and pre-select a stable model (ADR-006 / model-provider-guide).
-      function showModelRecovery() {
-        const banner = document.querySelector("#recoveryBanner");
-        if (banner) banner.hidden = false;
-        const sel = document.querySelector("#modelSelect");
-        if (sel) sel.value = DEFAULT_MODEL;
-      }
-
-      function hideModelRecovery() {
-        const banner = document.querySelector("#recoveryBanner");
-        if (banner) banner.hidden = true;
-      }
-
       // Classify an evaluation error and present one actionable message (ADR-006).
       function handleApiError(err, res) {
-        let message;
-        let deadModel = false;
+        const apiMsg =
+          (err && err.message) || "Unknown error during evaluation.";
+        let prefix = "";
         if (res) {
-          if (res.status === 429) {
-            message = "Rate limit reached. Wait a moment, then try again.";
-          } else if (res.status === 400 || res.status === 404) {
-            message = "The selected model is unavailable or invalid.";
-            deadModel = true;
-          } else if (res.status === 401 || res.status === 403) {
-            message = "Your API key was rejected. Check it and try again.";
-          } else {
-            message =
-              "The evaluation request failed (HTTP " + res.status + ").";
-          }
+          if (res.status === 429) prefix = "Rate limit reached — ";
+          else if (res.status === 401 || res.status === 403)
+            prefix = "API key problem — ";
+          else if (res.status === 400 || res.status === 404)
+            prefix = "Model problem — ";
+          else prefix = "Request failed (HTTP " + res.status + ") — ";
         } else if (err && /fetch|network/i.test(err.message || "")) {
-          message = "Network error — check your connection and try again.";
-        } else {
-          message = (err && err.message) || "Unknown error during evaluation.";
+          prefix = "Network error — ";
         }
+        const message = prefix + apiMsg;
         showError(message);
-        if (deadModel) showModelRecovery();
         return message;
       }
 
@@ -787,13 +759,16 @@ Output a JSON object with these fields:
         root.append(d);
       }
 
-      function renderEvaluation(fb) {
+      function renderEvaluation(fb, maxScore) {
         const root = document.querySelector("#analysisResult");
         root.replaceChildren();
+        const max = typeof maxScore === "number" ? maxScore : null;
+        const suffix = max != null ? "/" + max : "";
 
         const finalH = document.createElement("h3");
         finalH.className = "text-base font-bold text-gray-900";
-        finalH.textContent = "Estimated Score: " + (fb.final_score ?? "?");
+        finalH.textContent =
+          "Estimated Score: " + (fb.final_score ?? "?") + suffix;
         root.append(finalH);
 
         if (Array.isArray(fb.criteria) && fb.criteria.length) {
@@ -810,7 +785,7 @@ Output a JSON object with these fields:
             name.textContent = c.name + ": ";
             const score = document.createElement("span");
             score.className = "text-blue-700 font-semibibold";
-            score.textContent = String(c.score);
+            score.textContent = String(c.score) + suffix;
             li.append(name, score);
             if (c.notes) {
               const n = document.createElement("span");
@@ -960,7 +935,7 @@ Output a JSON object with these fields:
           feedback.model_used = modelId;
           feedback.prompt_version = PROMPT_VERSION;
           feedback.timestamp = new Date().toISOString();
-          renderEvaluation(feedback);
+          renderEvaluation(feedback, q.scoringBand ? q.scoringBand.max : null);
         } catch (err) {
           handleApiError(err, lastResponse);
         } finally {
