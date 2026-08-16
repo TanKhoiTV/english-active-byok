@@ -123,7 +123,7 @@
             id="userInput"
             oninput="updateWordCount()"
             rows="8"
-            class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="w-full border border-gray-300 rounded-lg p-3 text-base focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="Type your answer here..."
           ></textarea>
           <div class="flex justify-between text-xs text-gray-500 mt-1">
@@ -965,6 +965,23 @@ Output a JSON object with these fields:
         } catch (e) {
           console.error("localStorage not available:", e.message);
         }
+
+        // iPadOS Safari: taps on non-focusable content (empty space, the
+        // question statement, the analysis) don't reliably blur a focused
+        // <textarea> the way Chromium does. Release focus explicitly so the
+        // keyboard dismisses and long-press selection on other text works
+        // without a competing focus-zoom. Harmless on Chromium (blur is
+        // idempotent) and on non-touch devices (no touchend).
+        document.addEventListener(
+          "touchend",
+          (e) => {
+            const ae = document.activeElement;
+            if (!ae || ae.id !== "userInput") return;
+            if (e.target.closest && e.target.closest("#userInput")) return;
+            ae.blur();
+          },
+          true,
+        );
       };
 
       // ADR-004 Phase 1: parse embedded JSON synchronously (no fetch).
