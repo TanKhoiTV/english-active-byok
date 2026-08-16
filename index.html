@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TOEIC Writing Practice</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17" integrity="sha384-igm5BeiBt36UU4gqwWS7imYmelpTsZlQ45FZf+XBn9MuJbn4nQr7yx1yFydocC/K" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.13/dist/purify.min.js" integrity="sha384-ZuC+DIACqSIZTsp+7YF57cR5Y+6qXa7YFbEKdA/EHA/R0T+41dtorqucYl71Zp+t" crossorigin="anonymous"></script>
   </head>
 
   <body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
@@ -732,7 +732,8 @@ Output a JSON object with these fields:
           } else if (res.status === 401 || res.status === 403) {
             message = "Your API key was rejected. Check it and try again.";
           } else {
-            message = "The evaluation request failed (HTTP " + res.status + ").";
+            message =
+              "The evaluation request failed (HTTP " + res.status + ").";
           }
         } else if (err && /fetch|network/i.test(err.message || "")) {
           message = "Network error — check your connection and try again.";
@@ -803,13 +804,17 @@ Output a JSON object with these fields:
         renderMdSection(root, "Error analysis", fb.error_analysis);
         renderMdSection(root, "Polished revision", fb.polished_revision);
 
-        if (Array.isArray(fb.key_recommendations) && fb.key_recommendations.length) {
+        if (
+          Array.isArray(fb.key_recommendations) &&
+          fb.key_recommendations.length
+        ) {
           const h = document.createElement("h3");
           h.className = "text-sm font-bold text-gray-800 mt-3";
           h.textContent = "Key recommendations";
           root.append(h);
           const ul = document.createElement("ul");
-          ul.className = "list-disc list-inside text-sm text-gray-700 space-y-0.5";
+          ul.className =
+            "list-disc list-inside text-sm text-gray-700 space-y-0.5";
           fb.key_recommendations.forEach((r) => {
             const li = document.createElement("li");
             li.append(
@@ -824,10 +829,14 @@ Output a JSON object with these fields:
 
         const prov = document.querySelector("#provenance");
         if (prov) {
-          const when = fb.timestamp ? new Date(fb.timestamp).toLocaleString() : "";
+          const when = fb.timestamp
+            ? new Date(fb.timestamp).toLocaleString()
+            : "";
           prov.textContent =
-            "Model: " + (fb.model_used || "?") +
-            " · Prompt v" + (fb.prompt_version || "?") +
+            "Model: " +
+            (fb.model_used || "?") +
+            " · Prompt v" +
+            (fb.prompt_version || "?") +
             (when ? " · " + when : "");
         }
       }
