@@ -38,6 +38,8 @@ All reliability must therefore be solved in the prompt and in the client, at req
 
 Adopt a **layered reliability approach** with techniques prioritized by leverage-per-effort, all constrained to client-side execution only. The strategy stacks four Tier 1 required techniques — criterion decomposition via structured output, provider-adaptive determinism (system instructions + schema enforcement + temperature where supported), exact model version pinning with dead-model recovery, and approximate-score presentation with provenance tags — with Tier 2–3 techniques (few-shot calibration anchors, self-consistency voting) deferred as optional optimizations.
 
+Criterion decomposition (Tier 1 #1) addresses the **rubric criteria** — the quality dimensions in the ETS table above. A separate, orthogonal concern is **content coverage**: the response must also satisfy each task's specific instructions (Part 1 must use both given words; Part 2 must give two reasons and ask one question; Part 3 must address the stated essay topic). These are task-completion requirements, not quality dimensions, and are therefore *not* part of the rubric-criteria decomposition. They are sourced from ADR-004's question schema fields (`targetWords` for Part 1, `directives` for Part 2, `title`/`essayTopic` for Part 3) and injected into the evaluator prompt by `buildQuestionText()` so the AI examiner checks coverage alongside quality. ADR-004 is the authoritative source for these fields.
+
 The full implementation detail for each technique (including provider-specific temperature support, structured-output schema examples, dead-model recovery flow, and provenance tag formats) lives in `docs/technical-notes/reliability-implementation-notes.md` to keep this ADR focused on the decision, not the specification.
 
 ## Alternatives Considered
@@ -110,6 +112,6 @@ The full implementation detail for each technique (including provider-specific t
 
 - **ADR-001** — App scope: defines the BYOK, no-backend, no-telemetry, GitHub Pages deployment constraints this ADR operates within.
 - **ADR-003** — Framework and component architecture — the vanilla JS / no-build decision that constrains all Tier 1 techniques to client-side execution.
-- **ADR-004** — Question bank and data portability — import-time dead-model check (orthogonal to this ADR's runtime recovery in ADR-006); rubric criteria source for criterion decomposition.
+- **ADR-004** — Question bank and data portability — import-time dead-model check (orthogonal to this ADR's runtime recovery in ADR-006); authoritative source for both the **rubric criteria** (decomposed in Tier 1 #1) and the per-Part **content-coverage** signals (`targetWords`, `directives`, `title`/`essayTopic`) injected into the evaluator prompt by `buildQuestionText()`.
 - **ADR-005** — Build-step escape hatch: if triggered, may affect how Tier 2 optimizations (self-consistency voting) are implemented.
 - **ADR-006** — Error recovery and runtime validation: implements Tier 1 #3 (dead-model recovery) and Tier 1 #4 (provenance/prompt versioning) as shared client-side components.
