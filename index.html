@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TOEIC Writing Practice</title>
-    <script
-      src="https://cdn.tailwindcss.com/3.4.17"
-      integrity="sha384-igm5BeiBt36UU4gqwWS7imYmelpTsZlQ45FZf+XBn9MuJbn4nQr7yx1yFydocC/K"
-      crossorigin="anonymous"
-    ></script>
+    <!-- Tailwind Play CDN sends no Access-Control-Allow-Origin header, so SRI +
+         crossorigin is impossible (it breaks file:// loading via CORS). Pinned to
+         a fixed version for determinism; SRI is applied to marked/dompurify via
+         jsDelivr, which does send CORS headers. -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script
       src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
       integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
