@@ -32,6 +32,10 @@ Architecture and reference documentation for the English Active BYOK TOEIC Writi
 - [Model provider guide](model-provider-guide.md) — Gemini stable model list, temperature support, deprecation schedule
 - [Reference library](reference-library.md) — ETS sources and calibration references
 
+### Planning
+
+- [Roadmap](ROADMAP.md) — next objectives and deferred work
+
 ## Structure
 
 ```text
