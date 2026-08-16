@@ -14,25 +14,24 @@ conflict, docs win as design and `index.html` is brought into conformance.
   `docs/model-provider-guide.md`; defaults to Gemini 2.5 Flash; persisted in
   `localStorage`.
 
-### Conformance gaps (accepted ADRs not yet implemented in `index.html`)
+### Conformance status (accepted ADRs vs. `index.html`)
 
-| Accepted requirement | Reality in `index.html` |
+| Accepted requirement | Status in `index.html` |
 | --- | --- |
-| ADR-006: centralized `handleApiError()` + `ModelRecoveryBanner` + dead-model recovery (HTTP 400/404 → reselect) | `evaluateAnswer()` uses a bare `catch` that prints `err.message` raw. No classification, no recovery banner. |
-| ADR-006: init-time validator **throws** on authoring mistakes | `validateQuestion()` only `console.warn`s; `loadQuestions()` returns `[]`. |
-| ADR-002 T1#1: structured output (`responseSchema`) + per-criterion decomposition | Free-form `SYSTEM_PROMPT` → markdown, parsed with `marked`. No schema enforcement. |
-| ADR-002 T1#4: `PROMPT_VERSION` + provenance (`model_used`/`prompt_version`/`timestamp`) + "AI estimate" disclaimer | None present. |
-| ADR-001 / ADR-004: export/import settings + `answerHistory` | Absent — so ADR-006's *import-time* dead-model trigger has no caller yet. |
+| ADR-006: `handleApiError()` + `ModelRecoveryBanner` + dead-model recovery (HTTP 400/404 → reselect) | **Implemented** (P0, commit `055c508`) |
+| ADR-006: init-time validator **throws** on authoring mistakes | **Implemented** (P0, commit `055c508`) |
+| ADR-002 T1#1: structured output (`responseSchema`) + per-criterion decomposition | **Implemented** (P0, commit `055c508`) |
+| ADR-002 T1#4: `PROMPT_VERSION` + provenance + "AI estimate" disclaimer | **Implemented** (P0, commit `055c508`) |
+| ADR-002 T2: few-shot calibration anchors | Deferred (P1) |
+| ADR-001 / ADR-004: export/import settings + `answerHistory` | Not started — blocks ADR-006 *import-time* trigger (P2) |
 
-**Partially implemented (working, but not full ADR scope):** per-Part
-content-coverage signals (`targetWords`, `directives`, `title`/`essayTopic`) are
-wired via `buildQuestionText()`; deterministic system-instruction rules are present;
-model version pinning + dropdown are done. The earlier "ADR-002 Tier 1 techniques
-implemented" wording overstated this — see the gaps above.
+**Working before P0:** per-Part content-coverage signals (`targetWords`,
+`directives`, `title`/`essayTopic`) via `buildQuestionText()`; deterministic
+system-instruction rules; model version pinning + dropdown.
 
 ## Next objectives
 
-### P0 — Close the ADR conformance gap (do first)
+### P0 — Close the ADR conformance gap — DONE (commit `055c508`)
 
 All contained to `index.html`; no new dependencies, no build step.
 
