@@ -118,6 +118,40 @@
           </div>
         </div>
 
+        <!-- Calibration anchors (ADR-002 T2, opt-in). The calibration file is
+             gitignored and MUST NEVER be referenced or fetched by this app (ADR-004):
+             the user selects it locally and it is read in-memory only via FileReader
+             — never uploaded, embedded, or persisted. -->
+        <div
+          class="flex flex-wrap items-center gap-3 text-xs text-gray-600 border-t border-gray-200 pt-3"
+        >
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              id="calibrationToggle"
+              onchange="onCalibrationToggle()"
+              disabled
+            />
+            Use calibration examples
+          </label>
+          <label class="cursor-pointer">
+            <span
+              class="border border-gray-300 text-gray-600 text-xs px-3 py-1 rounded transition hover:bg-gray-50"
+              >Load calibration file…</span
+            >
+            <input
+              type="file"
+              id="calibrationFile"
+              accept=".json,application/json"
+              class="hidden"
+              onchange="loadCalibrationFile(event)"
+            />
+          </label>
+          <span id="calibrationStatus" class="text-[11px] text-gray-400"
+            >No calibration file loaded (kept local — never uploaded).</span
+          >
+        </div>
+
         <button
           id="submitBtn"
           onclick="evaluateAnswer()"
@@ -629,6 +663,7 @@ Output a JSON object with these fields:
         if (hint)
           hint.textContent =
             q.wordTarget && q.wordTarget.hint ? q.wordTarget.hint : "";
+        updateCalibrationStatus();
       }
 
       // Plain-text rendering of the selected question for the evaluator prompt.
@@ -668,6 +703,166 @@ Output a JSON object with these fields:
           "\n" +
           q.essayTopic
         );
+      }
+
+      // --- ADR-002 T2: few-shot calibration anchors (opt-in, local file only) ---
+      // The calibration file is gitignored and MUST NEVER be referenced or fetched by
+      // this app (ADR-004). The user selects it via <input type="file">; it is read
+      // in-memory with FileReader and never uploaded, embedded, or persisted.
+      let calibrationAnchors = null; // { 1: [...], 2: [...], 3: [...] }
+      let calibrationEnabled = false;
+
+      // Read a locally-selected calibration JSON (gitignored; never leaves the browser).
+      function loadCalibrationFile(event) {
+        const input = event.target;
+        const file = input.files && input.files[0];
+        const toggle = document.querySelector("#calibrationToggle");
+        if (!file) {
+          calibrationAnchors = null;
+          calibrationEnabled = false;
+          if (toggle) {
+            toggle.disabled = true;
+            toggle.checked = false;
+          }
+          updateCalibrationStatus();
+          return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => {
+          calibrationAnchors = null;
+          calibrationEnabled = false;
+          if (toggle) {
+            toggle.disabled = true;
+            toggle.checked = false;
+          }
+          updateCalibrationStatus(
+            "Could not read the selected file.",
+            "text-red-600",
+          );
+        };
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            const src = data && data.calibrationAnchors;
+            if (!src || typeof src !== "object")
+              throw new Error("No 'calibrationAnchors' section in the file.");
+            const cleaned = {};
+            [1, 2, 3].forEach((p) => {
+              const arr = src[p];
+              if (!Array.isArray(arr)) return;
+              const valid = arr.filter(
+                (a) =>
+                  a &&
+                  typeof a.response === "string" &&
+                  Array.isArray(a.criteria),
+              );
+              if (valid.length) cleaned[p] = valid;
+            });
+            if (!Object.keys(cleaned).length)
+              throw new Error("No usable calibration examples found.");
+            calibrationAnchors = cleaned;
+            calibrationEnabled = false;
+            if (toggle) {
+              toggle.disabled = false;
+              toggle.checked = false;
+            }
+            const counts = [1, 2, 3]
+              .filter((p) => cleaned[p])
+              .map((p) => "Part " + p + ": " + cleaned[p].length)
+              .join(", ");
+            updateCalibrationStatus(
+              "Loaded (local only) — " + counts + ". Check to enable.",
+              "text-green-600",
+            );
+          } catch (e) {
+            calibrationAnchors = null;
+            calibrationEnabled = false;
+            if (toggle) {
+              toggle.disabled = true;
+              toggle.checked = false;
+            }
+            updateCalibrationStatus(
+              "Load failed: " + e.message,
+              "text-red-600",
+            );
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function onCalibrationToggle() {
+        const toggle = document.querySelector("#calibrationToggle");
+        calibrationEnabled = !!(toggle && toggle.checked);
+        updateCalibrationStatus();
+      }
+
+      // Render the calibration-status line (optionally override message/color).
+      function updateCalibrationStatus(message, colorClass) {
+        const status = document.querySelector("#calibrationStatus");
+        if (!status) return;
+        if (message) {
+          status.textContent = message;
+          status.className = "text-[11px] " + (colorClass || "text-gray-400");
+          return;
+        }
+        if (!calibrationAnchors) {
+          status.textContent =
+            "No calibration file loaded (kept local — never uploaded).";
+          status.className = "text-[11px] text-gray-400";
+          return;
+        }
+        const counts = [1, 2, 3]
+          .filter((p) => calibrationAnchors[p])
+          .map((p) => "P" + p + ":" + calibrationAnchors[p].length)
+          .join(" ");
+        if (calibrationEnabled) {
+          const p = selectedQuestion ? selectedQuestion.part : null;
+          const n =
+            p && calibrationAnchors[p] ? calibrationAnchors[p].length : 0;
+          status.textContent =
+            "Calibration ON — " +
+            counts +
+            (p ? " · Part " + p + ": " + n + " injected" : "");
+          status.className = "text-[11px] text-green-600";
+        } else {
+          status.textContent =
+            "Loaded (local only) — " + counts + ". Check to enable.";
+          status.className = "text-[11px] text-gray-400";
+        }
+      }
+
+      // Build the few-shot calibration block for a Part, appended to the system prompt
+      // when enabled (ADR-002 T2). Returns "" otherwise.
+      function buildCalibrationSection(part) {
+        if (!calibrationEnabled || !calibrationAnchors) return "";
+        const anchors = calibrationAnchors[part];
+        if (!Array.isArray(anchors) || !anchors.length) return "";
+        const lines = [
+          "",
+          "=== CALIBRATION EXAMPLES (reference only — DO NOT score these; use them solely to anchor your scoring style for the student's answer) ===",
+        ];
+        anchors.forEach((a, i) => {
+          lines.push(
+            "Example " +
+              (i + 1) +
+              " (level: " +
+              (a.level || "reference") +
+              "):",
+          );
+          if (a.prompt) lines.push("Task: " + a.prompt);
+          lines.push("Example response: " + a.response);
+          if (Array.isArray(a.criteria) && a.criteria.length) {
+            lines.push(
+              "Score breakdown: " +
+                a.criteria.map((c) => c.name + "=" + c.score).join(", "),
+            );
+          }
+          if (a.rationale) lines.push("Rationale: " + a.rationale);
+        });
+        lines.push(
+          "=== END CALIBRATION EXAMPLES — now return the JSON evaluation for the student's actual answer ===",
+        );
+        return lines.join("\n");
       }
 
       function saveKey() {
@@ -900,7 +1095,11 @@ Output a JSON object with these fields:
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                systemInstruction: {
+                  parts: [
+                    { text: SYSTEM_PROMPT + buildCalibrationSection(q.part) },
+                  ],
+                },
                 contents: [
                   {
                     parts: [

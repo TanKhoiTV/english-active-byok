@@ -63,9 +63,10 @@ Few-shot examples in the system prompt reduce inter-model variance by anchoring 
 
 **Implementation:**
 
-- Keep ~3–5 examples per Part, sourced from `docs/questions-sample.json` (gitignored, internal calibration only — never embedded in the app).
+- Keep ~3–5 examples per Part, sourced from `docs/questions-sample.json` (gitignored, internal calibration only — never embedded in the app). Anchors live in that file's `calibrationAnchors` section as original, paraphrased `{ level, prompt, response, criteria[], rationale }` objects (copyright-safe per ADR-004 Quality Gate).
 - Examples show one high, one mid, and one low score per criterion, with brief rationale.
 - Refresh before each release to match the current prompt version.
+- **Runtime wiring (opt-in):** `index.html` must never `fetch()` or reference `docs/questions-sample.json` (ADR-004). The user loads it locally via a file picker (`FileReader`); `loadCalibrationFile()` parses and validates it in-memory, `onCalibrationToggle()` enables it, and `buildCalibrationSection(part)` appends the Part's anchors to `SYSTEM_PROMPT` for that evaluation only. The content is never uploaded, embedded, or persisted.
 
 ## Tier 3 — Deferred opt-in self-consistency
 

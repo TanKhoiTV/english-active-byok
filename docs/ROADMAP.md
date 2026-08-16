@@ -24,7 +24,7 @@ conflict, docs win as design and `index.html` is brought into conformance.
 | ADR-006: init-time validator **throws** on authoring mistakes | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T1#1: structured output (`responseSchema`) + per-criterion decomposition | **Implemented** (P0, commit `055c508`) |
 | ADR-002 T1#4: `PROMPT_VERSION` + provenance + "AI estimate" disclaimer | **Implemented** (P0, commit `055c508`) |
-| ADR-002 T2: few-shot calibration anchors | Deferred (P1) |
+| ADR-002 T2: few-shot calibration anchors | **Implemented** (P1) — opt-in, loaded from gitignored `docs/questions-sample.json` via a local file picker (never fetched/embedded) |
 | ADR-001 / ADR-004: export/import settings + `answerHistory` | Not started — blocks ADR-006 *import-time* trigger (P2) |
 
 **Working before P0:** per-Part content-coverage signals (`targetWords`,
@@ -99,9 +99,16 @@ classified banner rather than a raw error.
 
 ### P1 — Reliability hardening (optional, lower priority)
 
-1. **ADR-002 T2 — few-shot calibration anchors** (opt-in). Source ~3–5 examples per
-   Part from gitignored `docs/questions-sample.json` (never embed in the app);
-   paraphrase for copyright safety per ADR-004 Quality Gate. Refresh per release.
+1. **ADR-002 T2 — few-shot calibration anchors** — **DONE.** Opt-in. ~3 examples
+   per Part (high/mid/low) are authored as ORIGINAL paraphrased scoring samples
+   inside the gitignored `docs/questions-sample.json` (`calibrationAnchors` section,
+   copyright-safe per ADR-004 Quality Gate). At runtime the user loads that file
+   locally via a file picker (`FileReader`) — `index.html` never references or
+   `fetch()` the file, and the content is never embedded, uploaded, or persisted
+   (ADR-004 hard rule). When enabled, `buildCalibrationSection(part)` appends the
+   Part's anchors to `SYSTEM_PROMPT` for that evaluation only. **Refresh the anchors
+   per release** to match the current prompt version. The on-disk file is still
+   gitignored, so it is never committed to the public Pages repo.
 2. **Release policy (Tier 1 #3):** re-verify the `MODELS` list in `index.html`
    against `docs/model-provider-guide.md` before each release; the app intentionally
    omits `temperature` (deprecated on Gemini 3.x) — keep it that way.
