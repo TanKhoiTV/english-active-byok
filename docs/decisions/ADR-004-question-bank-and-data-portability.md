@@ -30,11 +30,13 @@ The ETS TOEIC Writing sample test (ets.org, publicly available PDF) defines the 
 
 ### Storage
 
-- **Phase 1**: Embed the question bank as a JSON array inside an inline `<script type="application/json">` tag in `index.html`. No `fetch()` required — the data is available immediately after HTML parse, supporting `file://` protocol and offline use. Total payload is small — a few KB for the initial bank — and loads synchronously with no `fetch()`.
+- **Phase 1**: Embed the question bank as a JSON array inside an inline `<script type="application/json">` tag in `index.html`. A `loadQuestions()` function (see `docs/technical-notes/file-structure-and-load-order.md`) parses the embedded JSON synchronously — no `fetch()` required. The data is available immediately after HTML parse, supporting `file://` protocol and offline use. Total payload is small — a few KB for the initial bank — and loads synchronously with no `fetch()`.
 - **Phase 2** (when the bank exceeds ~30 questions or 50 KB): Split into a separate `questions.json` file served from the same GitHub Pages origin, loaded via `fetch()` with a localStorage cache fallback:
 
   ```javascript
   // Pseudocode — see ADR-003 for integration
+  // Phase 1: loadQuestions() is synchronous (parse embedded JSON).
+  // Phase 2: loadQuestions() becomes async (fetch + cache fallback).
   async function loadQuestions() {
     try {
       const res = await fetch('questions.json', { cache: 'no-cache' });
@@ -127,6 +129,10 @@ The canonical question schema is documented in `docs/question-schema.md`. Each q
 ### Internal Reference File: `docs/questions-sample.json`
 
 The ETS sample questions and additional reference samples (TestSUCCEED) are stored in `docs/questions-sample.json` for **internal calibration only**. This file is listed in `.gitignore` and is **not part of the deployed static site** — it is not committed to the repo and therefore not served by GitHub Pages. Curators must distribute it separately (e.g., via private email) to anyone who needs it. The file must never be referenced by `index.html` or any runtime code path.
+
+If this file is accidentally committed to the public repo served by GitHub Pages, it is exposed at a predictable URL. The `.gitignore` entry is the primary safeguard — no runtime code path should ever reference or `fetch()` this file.
+
+Structure: the file is a JSON object with a `_notice` field (copyright safety notice — do not embed or publish) and a `questions` array. The `_notice` field must be preserved and updated whenever sources change.
 
 Note: calibration file question IDs use a non-conforming convention (`ets-p1-01`, `ts-p2-01`) and are intentionally excluded from `validateQuestion()`. Real authored questions must follow the `p${part}-` prefix convention.
 

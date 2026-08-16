@@ -36,7 +36,7 @@ The app is **Bring-Your-Own-Key (BYOK)** — users paste their own Google Gemini
 
 ### Constraints
 
-- **No backend server.** The app must be a static site (single HTML file or static bundle).
+- **No backend server.** The app must be a static site — a single HTML file or a pre-committed static bundle. Runtime build steps are prohibited; any future build step would require a superseding ADR amending ADR-001.
 - **Client-side only.** All state (API key, selected model, answer text, evaluation results) lives in the browser.
 - **Free hosting.** Must work on GitHub Pages (no custom domain requirements, no serverless functions).
 - **BYOK.** API key never leaves the browser; no telemetry, no analytics.
@@ -82,4 +82,5 @@ The app is **Bring-Your-Own-Key (BYOK)** — users paste their own Google Gemini
 ### Neutral
 
 - The AI evaluation reliability and rubric-based scoring approach is documented in **ADR-002**.
-- The architecture decision (which framework to use) is documented in **ADR-003**.
+- The architecture decision (which framework to use, and why no build step) is documented in **ADR-003**, which also documents deliberate migration checkpoints should the component count or complexity outgrow the zero-build envelope.
+- The question bank strategy (embedded JSON for Phase 1, separate file with fallback for Phase 2, original-curation for copyright safety) is documented in **ADR-004**.
