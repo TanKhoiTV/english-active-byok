@@ -19,6 +19,21 @@
       integrity="sha384-ZuC+DIACqSIZTsp+7YF57cR5Y+6qXa7YFbEKdA/EHA/R0T+41dtorqucYl71Zp+t"
       crossorigin="anonymous"
     ></script>
+    <!-- iPadOS Safari fix: explicitly opt the statement + analysis regions into
+         text selection. Safari ignores the default `user-select: auto` for
+         JS-injected text inside layout containers, so long-press selection
+         fails without this opt-in. user-select inherits to descendants. -->
+    <style>
+      #questionPromptText,
+      #analysisResult,
+      #questionPromptText *,
+      #analysisResult * {
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
+      }
+    </style>
+
   </head>
 
   <body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
