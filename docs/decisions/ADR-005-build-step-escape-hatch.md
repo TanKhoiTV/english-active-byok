@@ -71,3 +71,4 @@ When triggered, the future superseding ADR may adopt ES module authoring bundled
 - **ADR-001** — App scope and constraints
 - **ADR-003** — Framework and component architecture (primary; D1 is revised by this future ADR)
 - **ADR-004** — Question bank and data portability
+- **ADR-007** — Tailwind Play CDN: the canonical no-build styling tradeoff (production warning, no SRI) this escape hatch accepts

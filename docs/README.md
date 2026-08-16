@@ -14,6 +14,7 @@ Architecture and reference documentation for the English Active BYOK TOEIC Writi
 | [ADR-004](decisions/ADR-004-question-bank-and-data-portability.md) | Question bank and data portability | Accepted |
 | [ADR-005](decisions/ADR-005-build-step-escape-hatch.md) | Build-step migration escape hatch | Proposed |
 | [ADR-006](decisions/ADR-006-error-recovery-and-runtime-validation.md) | Error recovery and runtime validation | Accepted |
+| [ADR-007](decisions/ADR-007-tailwind-play-cdn.md) | Tailwind Play CDN (no-build styling; accept production warning, no SRI) | Accepted |
 
 ### Technical Notes (implementation companions)
 
