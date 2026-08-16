@@ -109,9 +109,31 @@ classified banner rather than a raw error.
    Part's anchors to `SYSTEM_PROMPT` for that evaluation only. **Refresh the anchors
    per release** to match the current prompt version. The on-disk file is still
    gitignored, so it is never committed to the public Pages repo.
-2. **Release policy (Tier 1 #3):** re-verify the `MODELS` list in `index.html`
-   against `docs/model-provider-guide.md` before each release; the app intentionally
-   omits `temperature` (deprecated on Gemini 3.x) — keep it that way.
+2. **Release policy (Tier 1 #3) — DONE (process established).** The `MODELS` list in
+   `index.html` was re-verified against `docs/model-provider-guide.md` on 2026-08-16
+   and is **in sync** (same 5 entries; default `gemini-3.6-flash`). `temperature` is
+   deprecated on Gemini 3.x and is **intentionally omitted** from every
+   `generateContent` request — confirmed in `evaluateAnswer`'s `generationConfig`
+   (no `temperature` field; the `temp` flag on `MODELS` is display-only and never
+   sent). A `LAST_VERIFIED` note above `MODELS` plus the checklist below make this a
+   repeatable pre-release step rather than a one-off.
+
+### Pre-release model re-verification checklist (P1 #2 / ADR-002 Tier 1 #3)
+
+Run before every release:
+
+1. Open `docs/model-provider-guide.md` and confirm the **Current stable model list**
+   and **Deprecation and sunset schedule** are current (re-check
+   <https://ai.google.dev/gemini-api/docs/deprecations> if anything looks stale).
+2. Diff that list against the `MODELS` array in `index.html` — every stable entry must
+   appear, and no removed/deprecated model should remain in the dropdown.
+3. Confirm `DEFAULT_MODEL` still points at the intended default (currently
+   `gemini-3.6-flash`).
+4. Confirm `temperature` is **not** present in `evaluateAnswer`'s `generationConfig`
+   (Gemini 3.x deprecates it; keep omitted).
+5. Update the `LAST_VERIFIED` comment above `MODELS` with today's date.
+6. *(Optional, needs a Gemini API key)* Hit `GET …/v1beta/models` to confirm the live
+   catalog still matches; drop any model ID no longer returned.
 
 ### P2 — Feature growth & UX
 
