@@ -3,7 +3,9 @@
 > **Purpose**: Concrete, vendor-specific configuration for AI model access that changes independently of ADR-002's reliability strategy.
 >
 > **Update rule**: Re-verify before each new app release. Trigger: Tier 1 #3 in ADR-002 ("pin exact model versions + handle dead-model recovery").
-> **Last verified**: 2026-08-15
+> **Last verified**: 2026-08-16
+>
+> **⚠️ 2026-08-16**: `gemini-2.5-flash` and `gemini-2.5-flash-lite` now return HTTP 404 ("no longer available") — Google pulled them ahead of the official Oct 16, 2026 shutdown. Removed from the dropdown; **default is now `gemini-3.6-flash`** (Google's listed replacement for 2.5 Flash).
 >
 > **Scope**: Gemini Developer API only (the app calls `https://generativelanguage.googleapis.com`). This document is structured with `## Gemini` so future providers can be added as additional top-level sections without changing ADR-002.
 
@@ -15,13 +17,11 @@
 
 | Display name (dropdown) | Pinned model ID | Temperature support | Notes |
 | :--- | :--- | :--- | :--- |
-| Gemini 3.7 Flash | `gemini-3.7-flash` | No (deprecated) | Latest stable as of 2026-08-15 |
-| Gemini 3.6 Flash | `gemini-3.6-flash` | No (deprecated) | Previous stable; may still be available |
+| **Gemini 3.6 Flash (default)** | `gemini-3.6-flash` | No (deprecated) | **Current default**; Google's listed replacement for 2.5 Flash |
+| Gemini 3.7 Flash | `gemini-3.7-flash` | No (deprecated) | Latest stable as of 2026-08-16 |
 | Gemini 3.5 Flash | `gemini-3.5-flash` | No (deprecated) | |
 | Gemini 3.5 Flash-Lite | `gemini-3.5-flash-lite` | No (deprecated) | No shutdown date announced |
 | Gemini 3.1 Flash-Lite | `gemini-3.1-flash-lite` | No (deprecated) | Scheduled shutdown May 7, 2027; 3.5 Flash-Lite is the recommended replacement |
-| Gemini 2.5 Flash | `gemini-2.5-flash` | Yes | GA model; no shutdown date announced |
-| Gemini 2.5 Flash-Lite | `gemini-2.5-flash-lite` | Yes | GA model; no shutdown date announced |
 
 [CITATION C3: Google Gemini API docs — Deprecations. "Starting with Gemini 3.6 Flash and Gemini 3.5 Flash-Lite, the sampling parameters temperature, top_p, and top_k are deprecated." https://ai.google.dev/gemini-api/docs/latest-model]
 
@@ -32,13 +32,12 @@
 ### Temperature support
 
 - **Gemini 3.x models** (3.7, 3.6, 3.5, 3.1 Flash-Lite): Temperature, top_p, and top_k are **deprecated**. These parameters are **ignored** by the API. Including them does not cause an error on current models, but Google states **future model generations will return HTTP 400**. [CITATION C3: https://ai.google.dev/gemini-api/docs/latest-model]
-- **Gemini 2.5 Flash / Flash-Lite (GA)**: Temperature is **supported**. [CITATION-NOTE: Verify this at implementation time — the deprecation may extend to 2.5 GA models in future updates.]
 - **Gemini 2.0 series**: **Shut down** June 1, 2026. [CITATION C3: https://ai.google.dev/gemini-api/docs/deprecations]
+- **Gemini 2.5 Flash / Flash-Lite**: **Pulled (HTTP 404)** ahead of the Oct 16, 2026 shutdown — removed from the dropdown; `gemini-3.6-flash` is the default. [Verified 2026-08-16]
 
 **Determinism strategy for Gemini**:
 
-- On Gemini 3.x: Rely on **system instructions** + **responseSchema** only. Do not set temperature in `generationConfig` (it will be ignored).
-- On Gemini 2.5 (if still available): Set `temperature: 0.2` in `generationConfig` as a secondary safety net.
+- On Gemini 3.x (current default `gemini-3.6-flash`): Rely on **system instructions** + **responseSchema** only. Do not set temperature in `generationConfig` (it is ignored/deprecated).
 
 [CITATION C3: Google Gemini API docs — "To ensure determinism, developers should use system instructions with explicit rules instead of adjusting these sampling parameters." https://ai.google.dev/gemini-api/docs/latest-model]
 
@@ -98,7 +97,7 @@ Use `responseMimeType: "application/json"` with a `responseSchema` in `generatio
 | Model family | Status | Sunset / Shutdown date |
 | :--- | :--- | :--- |
 | Gemini 2.0 Flash / Flash-Lite | Shut down | June 1, 2026 |
-| Gemini 2.5 Flash / Flash-Lite (GA) | Available | No shutdown date announced |
+| Gemini 2.5 Flash / Flash-Lite (GA) | **Pulled early (HTTP 404)** | Removed ahead of Oct 16, 2026 shutdown; use `gemini-3.6-flash` |
 | Gemini 2.5 preview / image sub-variants | Various | November 2025 – October 2026 (staggered) |
 | Gemini 3.1 Flash-Lite | Scheduled | May 7, 2027 (gemini-3.5-flash-lite is the recommended replacement) |
 | Gemini 3.5 Flash-Lite | Available | No shutdown date announced |
@@ -113,7 +112,7 @@ If a user's imported JSON references a model ID that has been shut down:
 
 1. The `evaluateAnswer()` fetch call will receive an HTTP 4xx error from `generativelanguage.googleapis.com`.
 2. Catch the error and display: "The model in your exported settings is no longer available. Please select a different model above."
-3. Pre-select the first stable model from the current list (see § Current stable model list) in the dropdown for one-click recovery.
+3. Pre-select `DEFAULT_MODEL` (currently `gemini-3.6-flash`) in the dropdown for one-click recovery.
 
 ## References
 
