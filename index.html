@@ -65,7 +65,10 @@
               Clear
             </button>
           </div>
-          <div id="keyStatus" class="text-xs text-gray-500 h-5 sm:text-right"></div>
+          <div
+            id="keyStatus"
+            class="text-xs text-gray-500 h-5 sm:text-right"
+          ></div>
         </div>
       </div>
 
@@ -689,10 +692,10 @@ Output a JSON object with these fields:
       function updateKeyStatus(message, colorClass) {
         const el = document.querySelector("#keyStatus");
         el.textContent = message;
-        el.className = `text-xs h-5 ${colorClass}`;
+        el.className = `text-xs h-5 sm:text-right ${colorClass}`;
         setTimeout(() => {
           el.textContent = "";
-          el.className = "text-xs text-gray-500 h-5";
+          el.className = "text-xs text-gray-500 h-5 sm:text-right";
         }, 3000);
       }
 
