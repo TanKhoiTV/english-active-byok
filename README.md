@@ -14,11 +14,11 @@ Open `index.html` in any modern browser, pick a question, write your answer, and
 
 ## What's included
 
-- **9 practice questions** — 3 for each Part.
+- **30 practice questions** — 10 for each Part.
   - **Part 1:** write one sentence using two given words.
   - **Part 2:** read an email and write a reply that meets the stated requirements.
   - **Part 3:** write a short opinion essay on a workplace topic.
-- **Pick your AI model** — choose which Gemini model evaluates your answer (defaults to Gemini 2.5 Flash).
+- **Pick your AI model** — choose which Gemini model evaluates your answer (defaults to Gemini 3.6 Flash).
 
 ## Background & references
 
