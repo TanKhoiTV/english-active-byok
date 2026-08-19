@@ -199,9 +199,49 @@ Run before every release:
     including that the changes shipped under the `1.0.0` label due to the oversight.
     **Status:** DONE.
 
+## P5 — Future work & backlog (not started)
+
+Captured from the docs after the v1.0.0 release. None block the release;
+ordered roughly by leverage. Re-check ADR-001/ADR-003 triggers before starting
+any structural item.
+
+1. **Verification harness** — Add smoke tests for `validateQuestion()`,
+   `handleApiError()`, and `loadQuestions()` so future releases are protected.
+   Several roadmap notes already flag "no test harness exists" and no test file
+   exists in the repo. (Roadmap P0 verification step.)
+2. **ADR-002 Tier 3 — opt-in self-consistency** — "High reliability mode": run 3
+   samples per evaluation, majority vote per criterion subscore. Documented in
+   `docs/technical-notes/reliability-implementation-notes.md` (Tier 3); the
+   self-consistency threshold (±1 vs. ±20% per band) is a pending implementation
+   decision.
+3. **Offline critical-CSS** — Inline a critical-CSS block so the UI stays usable
+   when CDNs fail (ADR-001 offline requirement). Noted v2 enhancement in
+   `docs/technical-notes/cross-cutting-concerns.md`; no vendored fallbacks are
+   checked in today.
+4. **ADR-004 Phase 2 — AI-assisted authoring tool** — Authoring-time generator
+   that proposes and self-critiques candidate questions (never at runtime).
+   Optional per ADR-004 § Phase 2; distinct from the bank-extraction split
+   (deferred with P3).
+5. **ADR-006 `ModelRecoveryBanner` re-add** — One-click dead-model recovery
+   (HTTP 400/404 → reselect newest stable model). Removed in `8c01de8` to fix the
+   header layout; "re-add after layout settled." **Deferred by standing
+   decision** — do not implement until explicitly requested.
+6. **Calibration-anchor refresh (per release)** — Refresh the gitignored
+   `docs/questions-sample.json` to match the current `PROMPT_VERSION` (now
+   `1.1.0`) before each release (P1 #1 / Tier 2). Curator task; never committed
+   to the repo.
+
+### Research watch-list (`docs/reference-library.md` → "Future Sources")
+
+Authoring-reference only; question text must remain original (ADR-004 Quality
+Gate). Track for potential question-bank authenticity improvements:
+- ELRA-W0028 (WBE Corpus) — business vocabulary frequency data (academic license).
+- iTalki / HelloTalk community posts — authentic business email language (public).
+- Reddit r/businessEnglish — real workplace communication examples (public).
+
 ## Watch list
 
-- `docs/reference-library.md` → "Future Sources" — research items to track.
+- **Research watch-list** → captured in **P5** (Future Sources from `docs/reference-library.md`).
 
 ## Suggested sequence
 
@@ -209,3 +249,6 @@ P0 (1–4) as one cohesive `index.html` change → P1 (5–6) as needed → P2 (
 product priority → P3 trigger met (30 q / 82 KB) but **decided to keep the
 monolith** (see P3); revisit only on the ADR-003/ADR-005 load-order trigger. Do
 **not** start the ADR-003/005 split independently.
+
+P4 (prompt-version integrity) is **DONE**. Open future work is tracked in **P5 —
+Future work & backlog** below.
