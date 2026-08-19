@@ -9,7 +9,7 @@ conflict, docs win as design and `index.html` is brought into conformance.
 ## Current state
 
 - `index.html` — monolithic single-page app; no build step (ADR-001, ADR-003 D1).
-- Question bank — 18 embedded questions (6 per Part), ADR-004 Phase 1 (inline JSON in `index.html`); still below the ~30-question / 50 KB split trigger.
+- Question bank — 30 embedded questions (10 per Part), ADR-004 Phase 1 (inline JSON in `index.html`); **at** the ~30-question / 50 KB split trigger — `index.html` is now ~82 KB, so the ADR-003/ADR-005 trigger (P3) is met.
 - Model selection dropdown — **done**; inline `MODELS` mirror of
   `docs/model-provider-guide.md`; defaults to **Gemini 3.6 Flash** (Gemini 2.5
   Flash / 2.5 Flash-Lite removed — both return HTTP 404 as of 2026-08-16);
@@ -97,6 +97,25 @@ classified banner rather than a raw error.
 - a11y (`9dc7e92`): associated `Select Question Prompt` → `#questionSelect` and
   `Your Written Response` → `#userInput`.
 
+**Work landed after the last roadmap sync (`6d26d4e`)** — for the record; the
+P2 items below are already marked DONE, and the Part 2 refactor is newly captured:
+
+- Question-bank batch 2 (`93b7dc2`): grew the embedded bank 18 → 30 questions
+  (10 per Part); all pass `validateQuestion`. Pushes the ADR-003/ADR-005 split
+  trigger (see P3).
+- iPadOS Safari a11y polish (`dd10536`, `d27d8ec`, `281c3f3`): enabled text
+  selection on the question statement + analysis regions, and released the
+  `<textarea>` focus on outside tap so the keyboard dismisses.
+- **Part 2 directive & rubric standardization (ADR-004 / ETS alignment)**
+  (`9e80a93`, `0e19371`, `ae4d925`, `5328e03`, `0e54f61`): reworked every Part 2
+  prompt's `directives` into a consistent *"give TWO pieces of information + ask
+  ONE question"* shape, collapsed redundant D2/D3 directives, softened overly
+  explicit asks, aligned the Part 2 rubric/scoring anchors with ETS 0–4 holistic
+  scoring, and corrected directive grammar/capitalization. Supersedes the ad-hoc
+  p2-004 copy-edit (`6d26d4e`) noted in P2 #1 and resolves that specific review
+  item; the standing human-review gate for unreleased assistant-authored prompts
+  still applies before any release.
+
 ### P1 — Reliability hardening (optional, lower priority)
 
 1. **ADR-002 T2 — few-shot calibration anchors** — **DONE.** Opt-in. ~3 examples
@@ -137,16 +156,17 @@ Run before every release:
 
 ### P2 — Feature growth & UX
 
-1. **Question-bank growth (ADR-004)** — **DONE (batch 1).** Grew the embedded,
-   original question bank from 9 → 18 questions (6 per Part; all pass
+1. **Question-bank growth (ADR-004)** — **DONE (batches 1–2).** Grew the embedded,
+   original question bank from 9 → 18 → 30 questions (10 per Part; all pass
    `validateQuestion`). Stays embedded as JSON in `#questionBank` (parsed
    synchronously, file://-safe — no `fetch`), consistent with ADR-004 Phase 1 and
    ADR-001. The `questions.json` + `fetch`/cache split stays deferred with
-   ADR-003/ADR-005 until the ~30-question / 50 KB trigger. New prompts are
-   assistant-authored and still need the human review gate before a release.
-   Copy-editing sweep applied 2026-08-16: fixed a p2-004 role mismatch in the
-   directives (response is from the customer's perspective) and tightened its body
-   wording; human review still pending.
+   ADR-003/ADR-005, but the ~30-question / 50 KB trigger is now **reached** (see
+   P3). New prompts are assistant-authored and still need the human review gate
+   before a release. The 2026-08-16 p2-004 role-mismatch copy-edit (`6d26d4e`) was
+   folded into the Part 2 directive standardization refactor captured below, which
+   resolves that specific review item; the standing human-review gate for
+   unreleased assistant-authored prompts still applies before any release.
 2. **Persistent cross-reload history** (localStorage) — **DONE.** Each successful
    evaluation is saved (prompt, answer, structured feedback, model, calibration flag,
    prompt version) under `gemini_eval_history` and survives a reload; a collapsible
@@ -160,12 +180,15 @@ Run before every release:
    is offered a switch to `DEFAULT_MODEL` (`gemini-3.6-flash`); affected history rows
    are marked "⚠ deprecated model". No `fetch`; everything stays client-side.
 
-### P3 — Structural (only on trigger)
+### P3 — Structural (trigger now reached)
 
-1. **ADR-003 14-file split / ADR-005 build step.** Stay deferred. The 14-file
-    split sits *below* ADR-005's 15-script-tag cliff and would force an ADR-005
-    supersede. Schedule only when load-order pain actually appears or the script-tag
-    count is exceeded.
+1. **ADR-003 14-file split / ADR-005 build step.** Trigger **reached**: the bank is
+    now 30 questions and `index.html` is ~82 KB, meeting the ~30-question / 50 KB
+    split trigger noted in P2 #1. **Still deferred by decision** — the 14-file split
+    sits *below* ADR-005's 15-script-tag cliff and would force an ADR-005 supersede,
+    and no load-order pain or script-tag-count excess has appeared yet. Re-evaluate
+    the split only when load-order pain actually appears or the script-tag count is
+    exceeded; otherwise keep the monolith.
 
 ## Watch list
 
