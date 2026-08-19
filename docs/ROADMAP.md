@@ -188,16 +188,14 @@ Run before every release:
 ## P4 — Backlog (reliability & governance)
 
 1. **Prompt-version integrity (ADR-002 Tier 1 #4 / `prompt-assembly.md`).** `PROMPT_VERSION`
-    is still `"1.0.0"` (index.html:933) even though the Part 2 directive/rubric
-    standardization refactor (9e80a93 → 0e54f61) materially changed `SYSTEM_PROMPT`.
-    `docs/technical-notes/prompt-assembly.md` requires the constant to be **bumped on
-    any prompt change** so the `provenance.prompt_version` stamp stays meaningful for
-    drift detection. **Action:** reconcile the version with the refactor — either bump
-    to a new version and document the change, or explicitly record why it stayed
-    `1.0.0` — and add a lightweight prompt-version → change mapping (e.g., a dated note
-    in `prompt-assembly.md`) so future evaluations can be traced to the exact prompt.
-    No forced code change; this is a governance/provenance correction. **Status:**
-    proposed (not started).
+    was still `"1.0.0"` even though the Part 2 directive/rubric standardization refactor
+    (9e80a93 → 0e54f61) materially changed `SYSTEM_PROMPT`. `prompt-assembly.md` requires
+    the constant to be **bumped on any prompt change** so the `provenance.prompt_version`
+    stamp stays meaningful for drift detection. **Resolved (commit `3b45966`):** bumped
+    `PROMPT_VERSION` to `"1.1.0"` and added a version → change mapping in
+    `prompt-assembly.md` (§ Prompt version history) documenting the Part 2 refactor,
+    including that the changes shipped under the `1.0.0` label due to the oversight.
+    **Status:** DONE.
 
 ## Watch list
 
