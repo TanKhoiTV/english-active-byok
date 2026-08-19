@@ -185,6 +185,20 @@ Run before every release:
 1. **ADR-003 14-file split / ADR-005 build step + ADR-004 Phase 2 bank extraction — DECISION (2026-08-16): keep the monolithic `index.html`.** The ADR-004 size trigger (~30 questions / 50 KB) is now **met** (30 questions, `index.html` ~82 KB), but the split is **not** executed.
     The size heuristic is a soft signal, not a hard mandate: the single file still satisfies every ADR-001 constraint (`file://`-safe inline JSON with no `fetch`, no build step, offline-capable). The ADR-003/ADR-005 structural trigger — **> 15 `<script>` tags AND load-order bugs** — is nowhere near met (`index.html` has ~5 script references, no load-order pain), so a 14-file split would sit *below* ADR-005's 15-tag cliff and force an ADR-005 supersede (a build step) for zero benefit at this scale. ADR-004 Phase 2 (extract `questions.json` + `fetch()` with cache fallback) would likewise trade the current pure-`file://` safety for a cache/fallback path at negligible benefit while the bank is still easily edited inline. **Re-evaluate only when** any of: (a) the inline question bank becomes a real editing/maintenance burden, (b) the script-tag count approaches 15 with actual load-order issues, or (c) an explicit future decision; until then, keep the monolith. Authoritative trigger conditions: ADR-004 § Decision (Phase 2) and ADR-003 § Consequences.
 
+## P4 — Backlog (reliability & governance)
+
+1. **Prompt-version integrity (ADR-002 Tier 1 #4 / `prompt-assembly.md`).** `PROMPT_VERSION`
+    is still `"1.0.0"` (index.html:933) even though the Part 2 directive/rubric
+    standardization refactor (9e80a93 → 0e54f61) materially changed `SYSTEM_PROMPT`.
+    `docs/technical-notes/prompt-assembly.md` requires the constant to be **bumped on
+    any prompt change** so the `provenance.prompt_version` stamp stays meaningful for
+    drift detection. **Action:** reconcile the version with the refactor — either bump
+    to a new version and document the change, or explicitly record why it stayed
+    `1.0.0` — and add a lightweight prompt-version → change mapping (e.g., a dated note
+    in `prompt-assembly.md`) so future evaluations can be traced to the exact prompt.
+    No forced code change; this is a governance/provenance correction. **Status:**
+    proposed (not started).
+
 ## Watch list
 
 - `docs/reference-library.md` → "Future Sources" — research items to track.
