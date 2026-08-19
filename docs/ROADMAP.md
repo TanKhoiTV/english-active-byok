@@ -113,8 +113,9 @@ P2 items below are already marked DONE, and the Part 2 refactor is newly capture
   explicit asks, aligned the Part 2 rubric/scoring anchors with ETS 0–4 holistic
   scoring, and corrected directive grammar/capitalization. Supersedes the ad-hoc
   p2-004 copy-edit (`6d26d4e`) noted in P2 #1 and resolves that specific review
-  item; the standing human-review gate for unreleased assistant-authored prompts
-  still applies before any release.
+  item; the human-review gate for the current 30 prompts was cleared on the
+  2026-08-16 pre-release pass, and the standing gate still applies to any *future*
+  assistant-authored prompts before a later release.
 
 ### P1 — Reliability hardening (optional, lower priority)
 
@@ -162,11 +163,12 @@ Run before every release:
    synchronously, file://-safe — no `fetch`), consistent with ADR-004 Phase 1 and
    ADR-001. The `questions.json` + `fetch`/cache split stays deferred with
    ADR-003/ADR-005, but the ~30-question / 50 KB trigger is now **reached** (see
-   P3). New prompts are assistant-authored and still need the human review gate
-   before a release. The 2026-08-16 p2-004 role-mismatch copy-edit (`6d26d4e`) was
-   folded into the Part 2 directive standardization refactor captured below, which
-   resolves that specific review item; the standing human-review gate for
-   unreleased assistant-authored prompts still applies before any release.
+   P3). New prompts are assistant-authored; the human review gate was cleared on
+   the 2026-08-16 pre-release pass (user sign-off on all 30 prompts). The
+   2026-08-16 p2-004 role-mismatch copy-edit (`6d26d4e`) was folded into the Part 2
+   directive standardization refactor captured below, which resolves that specific
+   review item; the standing human-review gate still applies to any *future*
+   assistant-authored prompts before a later release.
 2. **Persistent cross-reload history** (localStorage) — **DONE.** Each successful
    evaluation is saved (prompt, answer, structured feedback, model, calibration flag,
    prompt version) under `gemini_eval_history` and survives a reload; a collapsible
