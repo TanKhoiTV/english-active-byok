@@ -180,15 +180,10 @@ Run before every release:
    is offered a switch to `DEFAULT_MODEL` (`gemini-3.6-flash`); affected history rows
    are marked "⚠ deprecated model". No `fetch`; everything stays client-side.
 
-### P3 — Structural (trigger now reached)
+### P3 — Structural (decision: keep the monolith)
 
-1. **ADR-003 14-file split / ADR-005 build step.** Trigger **reached**: the bank is
-    now 30 questions and `index.html` is ~82 KB, meeting the ~30-question / 50 KB
-    split trigger noted in P2 #1. **Still deferred by decision** — the 14-file split
-    sits *below* ADR-005's 15-script-tag cliff and would force an ADR-005 supersede,
-    and no load-order pain or script-tag-count excess has appeared yet. Re-evaluate
-    the split only when load-order pain actually appears or the script-tag count is
-    exceeded; otherwise keep the monolith.
+1. **ADR-003 14-file split / ADR-005 build step + ADR-004 Phase 2 bank extraction — DECISION (2026-08-16): keep the monolithic `index.html`.** The ADR-004 size trigger (~30 questions / 50 KB) is now **met** (30 questions, `index.html` ~82 KB), but the split is **not** executed.
+    The size heuristic is a soft signal, not a hard mandate: the single file still satisfies every ADR-001 constraint (`file://`-safe inline JSON with no `fetch`, no build step, offline-capable). The ADR-003/ADR-005 structural trigger — **> 15 `<script>` tags AND load-order bugs** — is nowhere near met (`index.html` has ~5 script references, no load-order pain), so a 14-file split would sit *below* ADR-005's 15-tag cliff and force an ADR-005 supersede (a build step) for zero benefit at this scale. ADR-004 Phase 2 (extract `questions.json` + `fetch()` with cache fallback) would likewise trade the current pure-`file://` safety for a cache/fallback path at negligible benefit while the bank is still easily edited inline. **Re-evaluate only when** any of: (a) the inline question bank becomes a real editing/maintenance burden, (b) the script-tag count approaches 15 with actual load-order issues, or (c) an explicit future decision; until then, keep the monolith. Authoritative trigger conditions: ADR-004 § Decision (Phase 2) and ADR-003 § Consequences.
 
 ## Watch list
 
@@ -197,5 +192,6 @@ Run before every release:
 ## Suggested sequence
 
 P0 (1–4) as one cohesive `index.html` change → P1 (5–6) as needed → P2 (7–9) by
-product priority → P3 only on trigger. Do **not** start the ADR-003/005 split
-independently.
+product priority → P3 trigger met (30 q / 82 KB) but **decided to keep the
+monolith** (see P3); revisit only on the ADR-003/ADR-005 load-order trigger. Do
+**not** start the ADR-003/005 split independently.

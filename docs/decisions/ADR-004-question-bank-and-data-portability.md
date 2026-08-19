@@ -160,6 +160,10 @@ Note: calibration file question IDs use a non-conforming convention (`ets-p1-01`
 - **Phase 2 migration is non-breaking**: Moving from inline JSON to a separate `questions.json` file is transparent to users
 - **Export/import versioning**: Version 1 schema is the starting point; future versions are additive
 
+## Re-evaluation (2026-08-16)
+
+The Phase 2 trigger (~30 questions / 50 KB) is now **met**: the bank holds 30 questions (10 per Part) and the single `index.html` is ~82 KB. The Phase 2 split is **intentionally not executed at this time**. The size figure is a soft heuristic, not a hard mandate — the monolith still satisfies every ADR-001 constraint (`file://`-safe inline JSON, no build, offline-capable), and the ADR-003/ADR-005 structural trigger (> 15 `<script>` tags AND load-order bugs) is not approached (~5 script references, no load-order pain). Revisit when the inline bank becomes a maintenance burden or the script-tag/load-order trigger is reached. The full decision and its re-evaluation gates are recorded in `ROADMAP.md` § P3.
+
 ## Cross-References
 
 - **ADR-001**: Defines the scope and constraints (static-only, BYOK, offline-capable, JSON export/import)
